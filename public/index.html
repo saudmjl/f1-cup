@@ -348,6 +348,13 @@ function matchCard(m, pred){
   const locked = new Date(m.kickoff) <= serverNow;
   const finished = m.status==="finished";
   const isDbl = doubleByRound[roundKey(m.matchday)]===m.id;
+  // هل دبل هذه الجولة مُقفل؟ (موضوع على مباراة بدأت بالفعل)
+  let roundDblLocked = false;
+  const dblId = doubleByRound[roundKey(m.matchday)];
+  if(dblId && dblId!==m.id){
+    const dm = allMatches.find(x=>x.id===dblId);
+    if(dm && new Date(dm.kickoff) <= serverNow) roundDblLocked = true;
+  }
   const p1 = pred ? pred.pred1 : "";
   const p2 = pred ? pred.pred2 : "";
   const saved = !!pred;
@@ -374,7 +381,7 @@ function matchCard(m, pred){
     ${finished?`<div class="final">النتيجة الفعلية: <b>${m.score1} − ${m.score2}</b></div>`:""}
     <div class="actions">
       <button class="save ${saved?'done':''}" data-act="save" ${locked?'disabled':''}>${saved?'✓ محفوظ — عدّل':'احفظ التوقع'}</button>
-      <button class="dbl-btn ${isDbl?'on':''}" data-act="dbl" ${locked?'disabled':''}>×٢ ${isDbl?'الدبل هنا':'ضاعفها'}</button>
+      <button class="dbl-btn ${isDbl?'on':''}" data-act="dbl" ${(locked||roundDblLocked)?'disabled':''} ${roundDblLocked?'title="دبل هذه الجولة مُقفل — بدأت مباراته"':''}>×٢ ${isDbl?'الدبل هنا':(roundDblLocked?'مُقفل':'ضاعفها')}</button>
     </div>
   </div>`;
 }
