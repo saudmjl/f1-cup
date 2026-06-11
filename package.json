@@ -1,0 +1,9 @@
+{
+  "name": "f1-worldcup-predictions",
+  "version": "1.0.0",
+  "description": "قروب F1 — توقعات كأس العالم 2026",
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
