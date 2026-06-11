@@ -25,8 +25,9 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     const { data: matches } = await db.from("matches").select("*").order("kickoff");
     const { data: mine } = await db.from("predictions").select("*").eq("player_id", user.id);
+    const { data: me } = await db.from("players").select("is_admin").eq("id", user.id).single();
     const predMap = Object.fromEntries((mine || []).map(p => [p.match_id, p]));
-    return json(res, 200, { matches: matches || [], predictions: predMap, now: new Date().toISOString() });
+    return json(res, 200, { matches: matches || [], predictions: predMap, isAdmin: !!(me && me.is_admin), now: new Date().toISOString() });
   }
 
   // ─── حفظ توقع ───

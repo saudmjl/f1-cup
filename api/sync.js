@@ -42,13 +42,20 @@ export default async function handler(req, res) {
 
     const r = await fetch(SOURCE, { cache: "no-store" });
     const data = await r.json();
+
+    // النتائج المُدخلة يدويًا من الأدمن لا تُمسح بالمزامنة
+    const { data: existing } = await db.from("matches").select("id,manual,score1,score2,status");
+    const ex = Object.fromEntries((existing || []).map(m => [m.id, m]));
+
     const rows = [];
     let idCounter = 1;
 
     for (const m of data.matches) {
+      const id = idCounter++;
       const score = m.score?.ft;
-      rows.push({
-        id: idCounter++,
+      const e = ex[id];
+      const row = {
+        id,
         matchday: m.round,
         round_label: m.group || m.round,
         team1: m.team1,
@@ -58,8 +65,14 @@ export default async function handler(req, res) {
         score1: score ? score[0] : null,
         score2: score ? score[1] : null,
         status: score ? "finished" : "scheduled",
+        manual: false,
         updated_at: new Date().toISOString(),
-      });
+      };
+      if (e && e.manual) {                 // احتفظ بالنتيجة اليدوية
+        row.score1 = e.score1; row.score2 = e.score2;
+        row.status = e.status; row.manual = true;
+      }
+      rows.push(row);
     }
 
     // upsert المباريات
