@@ -235,6 +235,9 @@ let serverNow = null, doubleByRound = {};
 let allMatches = [], allPreds = {}, currentRound = null;
 let clockOffset = 0, countdownTimer = null;
 
+// تهريب أي رموز HTML في النصوص (حماية من XSS عبر أسماء اللاعبين)
+function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
 // استرجاع الجلسة المحفوظة
 token = sessionStorage.getItem("f1_token");
 meName = sessionStorage.getItem("f1_name");
@@ -511,7 +514,7 @@ async function loadBoard(){
       const me = p.name===meName;
       html += `<div class="row ${me?'me':''}">
         <div class="rank">${i===0?'🥇':(i===1?'🥈':(i===2?'🥉':i+1))}</div>
-        <div class="player"><span class="ava">${p.name[0]}</span>${p.name} ${me?'<span class="me-tag">أنت</span>':''}</div>
+        <div class="player"><span class="ava">${esc(p.name[0])}</span>${esc(p.name)} ${me?'<span class="me-tag">أنت</span>':''}</div>
         <div class="score">${p.total_points}<small> نقطة · ${p.correct_preds} صح</small></div>
       </div>`;
     });
@@ -536,7 +539,7 @@ async function loadStats(){
       const me = p.name===meName;
       html += `<div class="stat-row ${me?'me':''}">
         <div class="rank">${i===0?'🥇':(i===1?'🥈':(i===2?'🥉':i+1))}</div>
-        <div class="player"><span class="ava">${p.name[0]}</span>${p.name} ${me?'<span class="me-tag">أنت</span>':''}</div>
+        <div class="player"><span class="ava">${esc(p.name[0])}</span>${esc(p.name)} ${me?'<span class="me-tag">أنت</span>':''}</div>
         <div class="stat-num stat-exact">${p.exact_count}<small>نتيجة</small></div>
         <div class="stat-num stat-outcome">${p.outcome_count}<small>مباراة</small></div>
       </div>`;
@@ -585,7 +588,7 @@ function revealCard(m){
       if(!win && !ex) cls+=" miss";
       pts=`<span class="pt">${p.points>0?'+':''}${p.points}</span>`;
     }
-    return `<div class="${cls}"><span class="nm">${p.is_double?'⚡ ':''}${p.name}${p.is_double?' · دبل':''}</span><span class="sc">${p.pred2}-${p.pred1}</span>${pts}</div>`;
+    return `<div class="${cls}"><span class="nm">${p.is_double?'⚡ ':''}${esc(p.name)}${p.is_double?' · دبل':''}</span><span class="sc">${p.pred2}-${p.pred1}</span>${pts}</div>`;
   }).join("");
   return `<div class="rv-card">
     <div class="rv-head"><span class="rv-team">${i1.ar} <span class="rv-flag">${i1.flag}</span></span>${scoreHtml}<span class="rv-team"><span class="rv-flag">${i2.flag}</span> ${i2.ar}</span></div>
