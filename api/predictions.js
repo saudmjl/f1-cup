@@ -60,8 +60,12 @@ export default async function handler(req, res) {
         return json(res, 403, { error: "دبل هذه الجولة مُقفل — مباراة الدبل بدأت بالفعل" });
       }
 
+      // نلغي الدبل فقط عن مباريات الجولة التي لم تبدأ بعد (لا نلمس مباراة بدأت/انتهت)
+      const openRoundIds = (allMatches || [])
+        .filter(m => roundKey(m.matchday) === rk && new Date(m.kickoff) > new Date())
+        .map(m => m.id);
       await db.from("predictions").update({ is_double: false })
-        .eq("player_id", user.id).in("match_id", roundIds);
+        .eq("player_id", user.id).in("match_id", openRoundIds);
     }
 
     await db.from("predictions").upsert({
