@@ -139,6 +139,15 @@
   .pts-pill{display:inline-block;background:var(--pitch-deep);color:#fff;border-radius:8px;padding:1px 8px;font-weight:800;font-size:.8rem;margin:0 2px}
   .pts-pill.gold{background:var(--gold-deep);color:#231c00}
   .howto-app{margin:0 0 18px}
+
+  /* العدّاد التنازلي */
+  .countdown{display:flex;align-items:center;justify-content:center;gap:6px;margin:2px 0 4px;font-family:'Rubik',monospace;font-weight:700;font-size:.82rem;color:var(--pitch);background:rgba(14,159,90,.08);border:1px solid rgba(14,159,90,.2);border-radius:10px;padding:6px 10px}
+  .countdown.soon{color:var(--gold);background:rgba(245,197,66,.08);border-color:rgba(245,197,66,.28)}
+  .countdown.live{color:var(--red);background:rgba(229,72,77,.1);border-color:rgba(229,72,77,.3)}
+  .countdown .cd-seg{display:inline-flex;flex-direction:column;align-items:center;min-width:30px}
+  .countdown .cd-seg b{font-size:1rem;line-height:1.1}
+  .countdown .cd-seg span{font-size:.6rem;color:var(--muted);font-weight:600}
+  .countdown .cd-sep{color:var(--muted);font-weight:900}
 </style>
 </head>
 <body>
@@ -205,6 +214,7 @@
 let mode = "login", token = null, meName = null, isAdmin = false;
 let serverNow = null, doubleByRound = {};
 let allMatches = [], allPreds = {}, currentRound = null;
+let clockOffset = 0, countdownTimer = null;
 
 // استرجاع الجلسة المحفوظة
 token = sessionStorage.getItem("f1_token");
@@ -276,7 +286,9 @@ async function loadMatches(){
     if(r.status===401){ logout(); return; }
     const d = await r.json();
     serverNow = new Date(d.now);
+    clockOffset = serverNow.getTime() - Date.now();   // مزامنة العدّاد مع وقت الخادم
     renderMatches(d.matches, d.predictions, view);
+    startCountdownTimer();
   }catch(e){ view.innerHTML = '<div class="empty">تعذّر تحميل المباريات</div>'; }
 }
 
@@ -343,6 +355,40 @@ function renderRound(view){
 
 function gotoRound(rk){ if(!rk) return; currentRound = rk; renderRound(); window.scrollTo({top:0,behavior:'smooth'}); }
 
+// ─── العدّاد التنازلي ───
+const AR_DIGITS = ["٠","١","٢","٣","٤","٥","٦","٧","٨","٩"];
+function toAr(n){ return String(n).replace(/[0-9]/g, d=>AR_DIGITS[+d]); }
+function pad2(n){ return toAr(String(n).padStart(2,"0")); }
+function cdSeg(v,l){ return `<span class="cd-seg"><b>${v}</b><span>${l}</span></span>`; }
+function cdSep(){ return `<span class="cd-sep">:</span>`; }
+
+function startCountdownTimer(){
+  updateCountdowns();
+  if(countdownTimer) return;
+  countdownTimer = setInterval(updateCountdowns, 1000);
+}
+
+function updateCountdowns(){
+  const now = Date.now() + clockOffset;   // وقت مقدّر للخادم
+  document.querySelectorAll(".countdown[data-kick]").forEach(el=>{
+    const rem = (+el.dataset.kick) - now;
+    if(rem <= 0){
+      el.classList.remove("soon"); el.classList.add("live");
+      el.textContent = "🔴 بدأت";
+      const card = el.closest(".card");
+      if(card && !card.classList.contains("locked")){
+        card.classList.add("locked");
+        card.querySelectorAll(".num, .save, .dbl-btn").forEach(x=>{ x.disabled = true; });
+      }
+      return;
+    }
+    const s = Math.floor(rem/1000);
+    const d = Math.floor(s/86400), h = Math.floor((s%86400)/3600), m = Math.floor((s%3600)/60), sec = s%60;
+    el.classList.toggle("soon", s < 3600);   // أقل من ساعة
+    el.innerHTML = "⏳ " + cdSeg(toAr(d),"يوم") + cdSep() + cdSeg(pad2(h),"ساعة") + cdSep() + cdSeg(pad2(m),"دقيقة") + cdSep() + cdSeg(pad2(sec),"ثانية");
+  });
+}
+
 function matchCard(m, pred){
   const info1 = teamInfo(m.team1), info2 = teamInfo(m.team2);
   const locked = new Date(m.kickoff) <= serverNow;
@@ -378,6 +424,7 @@ function matchCard(m, pred){
       </div>
       <div class="team"><span class="flag">${info2.flag}</span><span class="tname">${info2.ar}</span></div>
     </div>
+    ${(!finished && !locked)?`<div class="countdown" data-kick="${new Date(m.kickoff).getTime()}">⏳ …</div>`:""}
     ${finished?`<div class="final">النتيجة الفعلية: <b>${m.score1} − ${m.score2}</b></div>`:""}
     <div class="actions">
       <button class="save ${saved?'done':''}" data-act="save" ${locked?'disabled':''}>${saved?'✓ محفوظ — عدّل':'احفظ التوقع'}</button>
