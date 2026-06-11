@@ -42,6 +42,7 @@
   .day-head h3{font-size:1.1rem;font-weight:900}
   .day-head .dh-meta{font-size:.78rem;color:var(--muted)}
   .dbl-hint{font-size:.78rem;color:var(--gold);margin-bottom:12px}
+  .mini-count{font-size:.66rem;color:var(--muted);text-align:center;margin:-2px 0 8px}
 
   .card{background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:var(--radius);padding:15px;margin-bottom:12px;box-shadow:var(--shadow);position:relative}
   .card.isdbl{border-color:var(--gold-deep);box-shadow:0 0 0 1px rgba(245,197,66,.25),var(--shadow)}
@@ -235,6 +236,7 @@
 let mode = "login", token = null, meName = null, isAdmin = false;
 let serverNow = null, doubleByRound = {};
 let allMatches = [], allPreds = {}, currentRound = null;
+let matchCounts = {}, totalPlayers = 0;
 let clockOffset = 0, countdownTimer = null;
 
 // تهريب أي رموز HTML في النصوص (حماية من XSS عبر أسماء اللاعبين)
@@ -318,6 +320,7 @@ async function loadMatches(){
     serverNow = new Date(d.now);
     clockOffset = serverNow.getTime() - Date.now();   // مزامنة العدّاد مع وقت الخادم
     isAdmin = !!d.isAdmin;
+    matchCounts = d.counts || {}; totalPlayers = d.totalPlayers || 0;
     document.getElementById("tabAdmin").style.display = isAdmin ? "" : "none";
     renderMatches(d.matches, d.predictions, view);
     startCountdownTimer();
@@ -446,6 +449,7 @@ function matchCard(m, pred){
       <span class="stage">${m.grp||""}</span>
       <span class="kick">${finished?'انتهت':(locked?'بدأت':kt)}</span>
     </div>
+    <div class="mini-count">👥 ${matchCounts[m.id]||0} توقّعوا · ${Math.max(0, totalPlayers-(matchCounts[m.id]||0))} ما توقّعوا</div>
     <div class="teams">
       <div class="team"><span class="flag">${info1.flag}</span><span class="tname">${info1.ar}</span></div>
       <div class="score-in">
