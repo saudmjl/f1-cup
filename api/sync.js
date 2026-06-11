@@ -4,14 +4,16 @@ import { db, json } from "./_lib.js";
 
 const SOURCE = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json";
 
+// قواعد النقاط (نسخة خادم): نتيجة دقيقة=50، فائز صح=20، غلط=0، الدبل يضاعف
 function calcPoints(p1, p2, s1, s2, dbl) {
   if (s1 == null || s2 == null) return 0;
   let pts = 0;
-  if (p1 === s1 && p2 === s2) pts = 3;
-  else if (Math.sign(p1 - p2) === Math.sign(s1 - s2)) pts = 1;
+  if (p1 === s1 && p2 === s2) pts = 50;
+  else if (Math.sign(p1 - p2) === Math.sign(s1 - s2)) pts = 20;
   return dbl ? pts * 2 : pts;
 }
 
+// تحويل وقت openfootball ("2026-06-11" + "20:00 UTC-6") إلى ISO
 function toKickoff(date, time) {
   if (!time) return new Date(date + "T18:00:00Z").toISOString();
   const m = time.match(/(\d{1,2}):(\d{2})\s*UTC([+-]\d{1,2})/);
@@ -47,8 +49,10 @@ export default async function handler(req, res) {
       });
     }
 
+    // upsert المباريات
     await db.from("matches").upsert(rows, { onConflict: "id" });
 
+    // إعادة حساب النقاط للمباريات المنتهية غير المحسوبة
     const { data: finished } = await db.from("matches")
       .select("id,score1,score2").eq("status", "finished");
     const finMap = Object.fromEntries((finished || []).map(f => [f.id, f]));

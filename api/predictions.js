@@ -3,6 +3,19 @@
 //   POST { token, matchId, pred1, pred2, isDouble } → حفظ توقع
 import { db, readToken, json } from "./_lib.js";
 
+// مفتاح الجولة: دور المجموعات 3 جولات (Matchday 1-7 / 8-13 / 14-17)، ثم الأدوار الإقصائية
+function roundKey(md) {
+  const m = /Matchday\s+(\d+)/i.exec(md || "");
+  if (m) { const n = +m[1]; return n <= 7 ? "g1" : n <= 13 ? "g2" : "g3"; }
+  if (/Round of 32/i.test(md)) return "r32";
+  if (/Round of 16/i.test(md)) return "r16";
+  if (/Quarter/i.test(md)) return "qf";
+  if (/Semi/i.test(md)) return "sf";
+  if (/third/i.test(md)) return "third";
+  if (/Final/i.test(md)) return "final";
+  return md || "other";
+}
+
 export default async function handler(req, res) {
   const token = req.method === "GET" ? req.query.token : req.body?.token;
   const user = readToken(token || "");
@@ -29,13 +42,12 @@ export default async function handler(req, res) {
       return json(res, 403, { error: "أُقفلت — بدأت المباراة" });
     }
 
-    // الدبل: مباراة واحدة لكل يوم تقويمي (بحسب يوم انطلاق المباراة UTC).
-    // نلغي الدبل عن بقية مباريات نفس اليوم لنفس اللاعب.
+    // الدبل: مباراة واحدة لكل جولة. نلغي الدبل عن بقية مباريات نفس الجولة لنفس اللاعب.
     if (isDouble) {
-      const dayKey = new Date(match.kickoff).toISOString().slice(0, 10);
-      const { data: allMatches } = await db.from("matches").select("id,kickoff");
+      const rk = roundKey(match.matchday);
+      const { data: allMatches } = await db.from("matches").select("id,matchday");
       const ids = (allMatches || [])
-        .filter(m => new Date(m.kickoff).toISOString().slice(0, 10) === dayKey)
+        .filter(m => roundKey(m.matchday) === rk)
         .map(m => m.id);
       await db.from("predictions").update({ is_double: false })
         .eq("player_id", user.id).in("match_id", ids);
