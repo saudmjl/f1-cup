@@ -27,7 +27,18 @@ export default async function handler(req, res) {
     const { data: mine } = await db.from("predictions").select("*").eq("player_id", user.id);
     const { data: me } = await db.from("players").select("is_admin").eq("id", user.id).single();
     const predMap = Object.fromEntries((mine || []).map(p => [p.match_id, p]));
-    return json(res, 200, { matches: matches || [], predictions: predMap, isAdmin: !!(me && me.is_admin), now: new Date().toISOString() });
+    const isAdmin = !!(me && me.is_admin);
+
+    // للأدمن فقط: عدد من توقّع لكل مباراة + إجمالي اللاعبين
+    let counts = undefined, totalPlayers = undefined;
+    if (isAdmin) {
+      const { data: players } = await db.from("players").select("id");
+      const { data: allPreds } = await db.from("predictions").select("match_id");
+      counts = {};
+      for (const p of allPreds || []) counts[p.match_id] = (counts[p.match_id] || 0) + 1;
+      totalPlayers = (players || []).length;
+    }
+    return json(res, 200, { matches: matches || [], predictions: predMap, isAdmin, counts, totalPlayers, now: new Date().toISOString() });
   }
 
   // ─── حفظ توقع ───
