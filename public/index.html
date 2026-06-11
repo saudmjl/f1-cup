@@ -219,11 +219,13 @@
       <button class="tab" id="tabBoard" onclick="showTab('board')">الترتيب</button>
       <button class="tab" id="tabStats" onclick="showTab('stats')">الإحصائيات</button>
       <button class="tab" id="tabReveal" onclick="showTab('reveal')">شيك نتايج غيرك</button>
+      <button class="tab" id="tabAdmin" onclick="showTab('admin')" style="display:none">النتائج</button>
     </div>
     <div id="matchesView"><div class="loading"><div class="spin"></div></div></div>
     <div id="boardView" style="display:none"><div class="loading"><div class="spin"></div></div></div>
     <div id="statsView" style="display:none"><div class="loading"><div class="spin"></div></div></div>
     <div id="revealView" style="display:none"><div class="loading"><div class="spin"></div></div></div>
+    <div id="adminView" style="display:none"><div class="loading"><div class="spin"></div></div></div>
   </div>
 </div>
 
@@ -292,13 +294,16 @@ function showTab(t){
   document.getElementById("tabBoard").classList.toggle("on", t==="board");
   document.getElementById("tabStats").classList.toggle("on", t==="stats");
   document.getElementById("tabReveal").classList.toggle("on", t==="reveal");
+  document.getElementById("tabAdmin").classList.toggle("on", t==="admin");
   document.getElementById("matchesView").style.display = t==="matches"?"block":"none";
   document.getElementById("boardView").style.display = t==="board"?"block":"none";
   document.getElementById("statsView").style.display = t==="stats"?"block":"none";
   document.getElementById("revealView").style.display = t==="reveal"?"block":"none";
+  document.getElementById("adminView").style.display = t==="admin"?"block":"none";
   if(t==="board") loadBoard();
   if(t==="stats") loadStats();
   if(t==="reveal") loadReveal();
+  if(t==="admin") loadAdmin();
 }
 
 // ─── المباريات ───
@@ -312,6 +317,8 @@ async function loadMatches(){
     const d = await r.json();
     serverNow = new Date(d.now);
     clockOffset = serverNow.getTime() - Date.now();   // مزامنة العدّاد مع وقت الخادم
+    isAdmin = !!d.isAdmin;
+    document.getElementById("tabAdmin").style.display = isAdmin ? "" : "none";
     renderMatches(d.matches, d.predictions, view);
     startCountdownTimer();
   }catch(e){ view.innerHTML = '<div class="empty">تعذّر تحميل المباريات</div>'; }
@@ -593,6 +600,70 @@ function revealCard(m){
     <div class="rv-meta">🔒 ${meta} · ${m.preds.length} توقّع</div>
     <div class="rv-grid">${rows}</div>
   </div>`;
+}
+
+// ─── إدارة النتائج (أدمن) ───
+async function loadAdmin(){
+  const view=document.getElementById("adminView");
+  view.innerHTML='<div class="loading"><div class="spin"></div></div>';
+  try{
+    const r=await fetch("/api/predictions?token="+encodeURIComponent(token));
+    if(r.status===401){ logout(); return; }
+    const d=await r.json();
+    if(!d.isAdmin){ view.innerHTML='<div class="empty">هذه الصفحة للأدمن فقط.</div>'; return; }
+    const now=new Date(d.now);
+    const started=(d.matches||[]).filter(m=>new Date(m.kickoff)<=now).sort((a,b)=>new Date(b.kickoff)-new Date(a.kickoff));
+    if(!started.length){ view.innerHTML='<div class="empty">ما فيه مباراة بدأت بعد — تظهر هنا لإدخال نتيجتها يدويًا عند تأخّر المصدر.</div>'; return; }
+    let html='<div class="howto-app dbl-hint">🛠️ إذا تأخّر المصدر التلقائي، أدخل النتيجة هنا وتُحسب النقاط فورًا (والمزامنة ما تمسحها).</div>';
+    html+=started.map(adminRow).join("");
+    view.innerHTML=html;
+  }catch(e){ view.innerHTML='<div class="empty">تعذّر التحميل</div>'; }
+}
+
+function adminRow(m){
+  const i1=teamInfo(m.team1), i2=teamInfo(m.team2);
+  const fin=m.status==="finished" && m.score1!=null;
+  const s1=fin?m.score1:"", s2=fin?m.score2:"";
+  const badge = fin ? (m.manual?'<span style="color:var(--gold)">● نتيجة يدوية</span>':'<span style="color:var(--pitch)">● تلقائي</span>') : '<span style="color:var(--muted)">⏳ بانتظار النتيجة</span>';
+  return `<div class="card" data-m="${m.id}">
+    <div class="card-top"><span class="stage">${m.grp||m.matchday||""}</span><span class="kick" style="color:var(--muted)">${badge}</span></div>
+    <div class="teams">
+      <div class="team"><span class="flag">${i1.flag}</span><span class="tname">${i1.ar}</span></div>
+      <div class="score-in">
+        <input class="num adm1" type="number" min="0" inputmode="numeric" value="${s1}"/>
+        <span class="dash">−</span>
+        <input class="num adm2" type="number" min="0" inputmode="numeric" value="${s2}"/>
+      </div>
+      <div class="team"><span class="flag">${i2.flag}</span><span class="tname">${i2.ar}</span></div>
+    </div>
+    <div class="actions">
+      <button class="save" onclick="saveResult(${m.id})">حفظ النتيجة</button>
+      ${m.manual?`<button class="dbl-btn" onclick="clearResult(${m.id})">إلغاء اليدوي</button>`:''}
+    </div>
+  </div>`;
+}
+
+async function saveResult(mid){
+  const card=document.querySelector('.card[data-m="'+mid+'"]');
+  const s1=card.querySelector('.adm1').value, s2=card.querySelector('.adm2').value;
+  if(s1===""||s2===""){ toast("اكتب نتيجة الفريقين", true); return; }
+  try{
+    const r=await fetch("/api/result",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,matchId:mid,score1:parseInt(s1),score2:parseInt(s2)})});
+    const d=await r.json();
+    if(!r.ok){ toast(d.error||"تعذّر الحفظ", true); return; }
+    toast("✅ تم حفظ النتيجة واحتساب النقاط");
+    loadAdmin();
+  }catch(e){ toast("تعذّر الاتصال", true); }
+}
+
+async function clearResult(mid){
+  try{
+    const r=await fetch("/api/result",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token,matchId:mid,clear:true})});
+    const d=await r.json();
+    if(!r.ok){ toast(d.error||"تعذّر", true); return; }
+    toast("أُلغيت النتيجة اليدوية");
+    loadAdmin();
+  }catch(e){ toast("تعذّر الاتصال", true); }
 }
 
 let tT;
