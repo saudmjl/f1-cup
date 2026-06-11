@@ -565,7 +565,7 @@ async function loadReveal(){
 function revealCard(m){
   const i1=teamInfo(m.team1), i2=teamInfo(m.team2);
   const finished = m.status==="finished" && m.score1!=null && m.score2!=null;
-  const scoreHtml = finished ? `<span class="rv-score">${m.score1} - ${m.score2}</span>`
+  const scoreHtml = finished ? `<span class="rv-score">${m.score2} - ${m.score1}</span>`
                              : `<span class="rv-score pending">– : –</span>`;
   const meta = finished ? 'النتيجة الفعلية · انتهت' : 'بدأت · لم تنتهِ بعد';
   let preds=[...m.preds];
@@ -585,7 +585,7 @@ function revealCard(m){
       if(!win && !ex) cls+=" miss";
       pts=`<span class="pt">${p.points>0?'+':''}${p.points}</span>`;
     }
-    return `<div class="${cls}"><span class="nm">${p.is_double?'⚡ ':''}${p.name}${p.is_double?' · دبل':''}</span><span class="sc">${p.pred1}-${p.pred2}</span>${pts}</div>`;
+    return `<div class="${cls}"><span class="nm">${p.is_double?'⚡ ':''}${p.name}${p.is_double?' · دبل':''}</span><span class="sc">${p.pred2}-${p.pred1}</span>${pts}</div>`;
   }).join("");
   return `<div class="rv-card">
     <div class="rv-head"><span class="rv-team">${i1.ar} <span class="rv-flag">${i1.flag}</span></span>${scoreHtml}<span class="rv-team"><span class="rv-flag">${i2.flag}</span> ${i2.ar}</span></div>
