@@ -356,9 +356,8 @@ function renderRound(view){
 function gotoRound(rk){ if(!rk) return; currentRound = rk; renderRound(); window.scrollTo({top:0,behavior:'smooth'}); }
 
 // ─── العدّاد التنازلي ───
-const AR_DIGITS = ["٠","١","٢","٣","٤","٥","٦","٧","٨","٩"];
-function toAr(n){ return String(n).replace(/[0-9]/g, d=>AR_DIGITS[+d]); }
-function pad2(n){ return toAr(String(n).padStart(2,"0")); }
+function toAr(n){ return String(n); }            // أرقام إنجليزية في العدّاد
+function pad2(n){ return String(n).padStart(2,"0"); }
 function cdSeg(v,l){ return `<span class="cd-seg"><b>${v}</b><span>${l}</span></span>`; }
 function cdSep(){ return `<span class="cd-sep">:</span>`; }
 
