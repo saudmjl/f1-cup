@@ -3,6 +3,22 @@
 import { db, json } from "./_lib.js";
 
 const SOURCE = "https://raw.githubusercontent.com/openfootball/worldcup.json/master/2026/worldcup.json";
+const RESULTS_SOURCE = "https://worldcup26.ir/get/games"; // مصدر النتائج الفعلية
+
+// توحيد أسماء الفرق بين المصدرين (لمطابقة آمنة)
+function normTeam(s) {
+  let x = String(s || "").toLowerCase().replace(/[^a-z]/g, "");
+  if (x.includes("czech")) return "czech";
+  if (x.includes("bosnia")) return "bosnia";
+  if (x === "usa" || x.includes("unitedstates")) return "usa";
+  if (x.includes("korea")) return "korea";
+  if (x.includes("ivor") || x.includes("cotedivoire")) return "ivory";
+  if (x.includes("congo")) return "congo";
+  if (x.includes("turk")) return "turkey";
+  if (x.includes("curacao") || x.includes("curaao")) return "curacao";
+  return x;
+}
+function pairKey(a, b) { return [normTeam(a), normTeam(b)].sort().join("|"); }
 
 // قواعد النقاط (نسخة خادم): نتيجة دقيقة=50، فائز صح=20، غلط=0، الدبل يضاعف
 function calcPoints(p1, p2, s1, s2, dbl) {
@@ -74,6 +90,25 @@ export default async function handler(req, res) {
       }
       rows.push(row);
     }
+
+    // ── طبقة النتائج من worldcup26.ir (يوفّر السكور الفعلي) ──
+    try {
+      const wr = await fetch(RESULTS_SOURCE, { cache: "no-store" });
+      const wd = await wr.json();
+      const games = Array.isArray(wd) ? wd : (wd.games || wd.data || []);
+      const byPair = {};
+      for (const row of rows) byPair[pairKey(row.team1, row.team2)] = row;
+      for (const g of games || []) {
+        if (String(g.finished).toUpperCase() !== "TRUE") continue;
+        const hs = parseInt(g.home_score), as = parseInt(g.away_score);
+        if (!(hs >= 0) || !(as >= 0)) continue;
+        const row = byPair[pairKey(g.home_team_name_en, g.away_team_name_en)];
+        if (!row || row.manual) continue;                  // النتيجة اليدوية لها الأولوية
+        if (normTeam(g.home_team_name_en) === normTeam(row.team1)) { row.score1 = hs; row.score2 = as; }
+        else { row.score1 = as; row.score2 = hs; }
+        row.status = "finished";
+      }
+    } catch (e) { /* تجاهل تعذّر مصدر النتائج */ }
 
     // upsert المباريات
     await db.from("matches").upsert(rows, { onConflict: "id" });
