@@ -140,6 +140,23 @@
   .pts-pill.gold{background:var(--gold-deep);color:#231c00}
   .howto-app{margin:0 0 18px}
 
+  /* بطاقات الكشف */
+  .rv-card{background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin-bottom:14px;box-shadow:var(--shadow)}
+  .rv-head{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:2px}
+  .rv-team{font-weight:800;font-size:.92rem}
+  .rv-flag{font-size:1.3rem;vertical-align:-3px}
+  .rv-score{font-family:'Rubik';font-weight:900;font-size:1.5rem;letter-spacing:1px}
+  .rv-score.pending{color:var(--muted);font-size:1.2rem;letter-spacing:2px}
+  .rv-meta{text-align:center;font-size:.72rem;color:var(--muted);margin-bottom:12px}
+  .rv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:7px}
+  .rv-p{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.03);border-radius:10px;padding:7px 11px}
+  .rv-p .nm{flex:1;font-size:.82rem}
+  .rv-p .sc{font-weight:800;font-size:.9rem;font-family:'Rubik'}
+  .rv-p .pt{font-size:.68rem;font-weight:800;min-width:28px;text-align:left;color:var(--muted)}
+  .rv-p.exact{background:rgba(14,159,90,.15)} .rv-p.exact .nm,.rv-p.exact .sc,.rv-p.exact .pt{color:var(--pitch)}
+  .rv-p.dbl{background:rgba(245,197,66,.1)} .rv-p.dbl .nm,.rv-p.dbl .sc,.rv-p.dbl .pt{color:var(--gold)}
+  .rv-p.miss{opacity:.5}
+
   /* العدّاد التنازلي */
   .countdown{display:flex;align-items:center;justify-content:center;gap:6px;margin:2px 0 4px;font-family:'Rubik',monospace;font-weight:700;font-size:.82rem;color:var(--pitch);background:rgba(14,159,90,.08);border:1px solid rgba(14,159,90,.2);border-radius:10px;padding:6px 10px}
   .countdown.soon{color:var(--gold);background:rgba(245,197,66,.08);border-color:rgba(245,197,66,.28)}
@@ -201,10 +218,12 @@
       <button class="tab on" id="tabMatches" onclick="showTab('matches')">المباريات</button>
       <button class="tab" id="tabBoard" onclick="showTab('board')">الترتيب</button>
       <button class="tab" id="tabStats" onclick="showTab('stats')">الإحصائيات</button>
+      <button class="tab" id="tabReveal" onclick="showTab('reveal')" style="display:none">الكشف</button>
     </div>
     <div id="matchesView"><div class="loading"><div class="spin"></div></div></div>
     <div id="boardView" style="display:none"><div class="loading"><div class="spin"></div></div></div>
     <div id="statsView" style="display:none"><div class="loading"><div class="spin"></div></div></div>
+    <div id="revealView" style="display:none"><div class="loading"><div class="spin"></div></div></div>
   </div>
 </div>
 
@@ -262,6 +281,8 @@ function showApp(){
   document.getElementById("loginView").style.display="none";
   document.getElementById("appView").style.display="block";
   document.getElementById("meName").textContent = meName;
+  // تبويب «الكشف»: مخفي إلا في وضع المعاينة (?preview=1) — مؤقتًا للتجربة
+  if (location.search.includes("preview=1")) document.getElementById("tabReveal").style.display = "";
   loadMatches();
 }
 
@@ -269,11 +290,14 @@ function showTab(t){
   document.getElementById("tabMatches").classList.toggle("on", t==="matches");
   document.getElementById("tabBoard").classList.toggle("on", t==="board");
   document.getElementById("tabStats").classList.toggle("on", t==="stats");
+  document.getElementById("tabReveal").classList.toggle("on", t==="reveal");
   document.getElementById("matchesView").style.display = t==="matches"?"block":"none";
   document.getElementById("boardView").style.display = t==="board"?"block":"none";
   document.getElementById("statsView").style.display = t==="stats"?"block":"none";
+  document.getElementById("revealView").style.display = t==="reveal"?"block":"none";
   if(t==="board") loadBoard();
   if(t==="stats") loadStats();
+  if(t==="reveal") loadReveal();
 }
 
 // ─── المباريات ───
@@ -520,6 +544,54 @@ async function loadStats(){
     html += '</div>';
     view.innerHTML = html;
   }catch(e){ view.innerHTML='<div class="empty">تعذّر تحميل الإحصائيات</div>'; }
+}
+
+// ─── الكشف: توقعات الجميع للمباريات التي بدأت ───
+function sgn(a,b){ return a>b?1:(a<b?-1:0); }
+
+async function loadReveal(){
+  const view=document.getElementById("revealView");
+  view.innerHTML='<div class="loading"><div class="spin"></div></div>';
+  try{
+    const r=await fetch("/api/reveal?token="+encodeURIComponent(token));
+    if(r.status===401){ logout(); return; }
+    const d=await r.json();
+    const ms=d.matches||[];
+    if(!ms.length){ view.innerHTML='<div class="empty">ما فيه مباراة بدأت بعد — يظهر هنا توقعات الجميع تلقائيًا بمجرد ما تبدأ أي مباراة.</div>'; return; }
+    view.innerHTML=ms.map(revealCard).join("");
+  }catch(e){ view.innerHTML='<div class="empty">تعذّر تحميل الكشف</div>'; }
+}
+
+function revealCard(m){
+  const i1=teamInfo(m.team1), i2=teamInfo(m.team2);
+  const finished = m.status==="finished" && m.score1!=null && m.score2!=null;
+  const scoreHtml = finished ? `<span class="rv-score">${m.score1} - ${m.score2}</span>`
+                             : `<span class="rv-score pending">– : –</span>`;
+  const meta = finished ? 'النتيجة الفعلية · انتهت' : 'بدأت · لم تنتهِ بعد';
+  let preds=[...m.preds];
+  if(finished){
+    const rank=p=>{ const ex=p.pred1===m.score1&&p.pred2===m.score2; const win=sgn(p.pred1,p.pred2)===sgn(m.score1,m.score2); return ex?0:(win?1:2); };
+    preds.sort((a,b)=>rank(a)-rank(b));
+  } else {
+    preds.sort((a,b)=> (b.is_double?1:0)-(a.is_double?1:0));
+  }
+  const rows=preds.map(p=>{
+    let cls="rv-p", pts="";
+    if(p.is_double) cls+=" dbl";
+    if(finished){
+      const ex=p.pred1===m.score1&&p.pred2===m.score2;
+      const win=sgn(p.pred1,p.pred2)===sgn(m.score1,m.score2);
+      if(ex && !p.is_double) cls="rv-p exact";
+      if(!win && !ex) cls+=" miss";
+      pts=`<span class="pt">${p.points>0?'+':''}${p.points}</span>`;
+    }
+    return `<div class="${cls}"><span class="nm">${p.is_double?'⚡ ':''}${p.name}${p.is_double?' · دبل':''}</span><span class="sc">${p.pred1}-${p.pred2}</span>${pts}</div>`;
+  }).join("");
+  return `<div class="rv-card">
+    <div class="rv-head"><span class="rv-team">${i1.ar} <span class="rv-flag">${i1.flag}</span></span>${scoreHtml}<span class="rv-team"><span class="rv-flag">${i2.flag}</span> ${i2.ar}</span></div>
+    <div class="rv-meta">🔒 ${meta} · ${m.preds.length} توقّع</div>
+    <div class="rv-grid">${rows}</div>
+  </div>`;
 }
 
 let tT;
