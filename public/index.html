@@ -602,7 +602,7 @@ function revealCard(m){
   </div>`;
 }
 
-// ─── إدارة النتائج (أدمن) ───
+// ─── إدارة النتائج + المشاركة (أدمن) ───
 async function loadAdmin(){
   const view=document.getElementById("adminView");
   view.innerHTML='<div class="loading"><div class="spin"></div></div>';
@@ -612,34 +612,48 @@ async function loadAdmin(){
     const d=await r.json();
     if(!d.isAdmin){ view.innerHTML='<div class="empty">هذه الصفحة للأدمن فقط.</div>'; return; }
     const now=new Date(d.now);
-    const started=(d.matches||[]).filter(m=>new Date(m.kickoff)<=now).sort((a,b)=>new Date(b.kickoff)-new Date(a.kickoff));
-    if(!started.length){ view.innerHTML='<div class="empty">ما فيه مباراة بدأت بعد — تظهر هنا لإدخال نتيجتها يدويًا عند تأخّر المصدر.</div>'; return; }
-    let html='<div class="howto-app dbl-hint">🛠️ إذا تأخّر المصدر التلقائي، أدخل النتيجة هنا وتُحسب النقاط فورًا (والمزامنة ما تمسحها).</div>';
-    html+=started.map(adminRow).join("");
-    view.innerHTML=html;
+    const counts=d.counts||{}, total=d.totalPlayers||0;
+    const all=(d.matches||[]);
+    const started=all.filter(m=>new Date(m.kickoff)<=now).sort((a,b)=>new Date(b.kickoff)-new Date(a.kickoff));
+    const upcoming=all.filter(m=>new Date(m.kickoff)>now).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff)).slice(0,16);
+    let html=`<div class="howto-app dbl-hint">👥 إجمالي اللاعبين: <b>${total}</b> — كم توقّع وكم ما توقّع لكل مباراة، وإدخال النتيجة عند تأخّر المصدر.</div>`;
+    if(started.length){
+      html+='<div class="day-head"><h3>المباريات التي بدأت</h3></div>';
+      html+=started.map(m=>adminRow(m,counts[m.id]||0,total,true)).join("");
+    }
+    if(upcoming.length){
+      html+='<div class="day-head" style="margin-top:20px"><h3>القادمة (المشاركة)</h3></div>';
+      html+=upcoming.map(m=>adminRow(m,counts[m.id]||0,total,false)).join("");
+    }
+    view.innerHTML=html || '<div class="empty">لا توجد مباريات</div>';
   }catch(e){ view.innerHTML='<div class="empty">تعذّر التحميل</div>'; }
 }
 
-function adminRow(m){
+function adminRow(m, predicted, total, started){
   const i1=teamInfo(m.team1), i2=teamInfo(m.team2);
+  const notPred=Math.max(0, total-predicted);
   const fin=m.status==="finished" && m.score1!=null;
   const s1=fin?m.score1:"", s2=fin?m.score2:"";
-  const badge = fin ? (m.manual?'<span style="color:var(--gold)">● نتيجة يدوية</span>':'<span style="color:var(--pitch)">● تلقائي</span>') : '<span style="color:var(--muted)">⏳ بانتظار النتيجة</span>';
+  const kt=new Date(m.kickoff).toLocaleString("ar",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  const badge = started
+    ? (fin ? (m.manual?'<span style="color:var(--gold)">● نتيجة يدوية</span>':'<span style="color:var(--pitch)">● النتيجة دخلت</span>') : '<span style="color:var(--muted)">⏳ بانتظار النتيجة</span>')
+    : `<span style="color:var(--pitch)">${kt}</span>`;
+  const mid = started
+    ? `<div class="score-in"><input class="num adm1" type="number" min="0" inputmode="numeric" value="${s1}"/><span class="dash">−</span><input class="num adm2" type="number" min="0" inputmode="numeric" value="${s2}"/></div>`
+    : `<div class="score-in"><span style="color:var(--muted);font-weight:800">ضد</span></div>`;
+  const countLine = `<div class="rv-meta" style="margin:10px 0 0">👥 توقّع <b style="color:var(--pitch)">${predicted}</b> · ما توقّع <b style="color:var(--red)">${notPred}</b> <span style="color:var(--muted)">(من ${total})</span></div>`;
+  const actions = started
+    ? `<div class="actions"><button class="save" onclick="saveResult(${m.id})">حفظ النتيجة</button>${m.manual?`<button class="dbl-btn" onclick="clearResult(${m.id})">إلغاء اليدوي</button>`:''}</div>`
+    : "";
   return `<div class="card" data-m="${m.id}">
     <div class="card-top"><span class="stage">${m.grp||m.matchday||""}</span><span class="kick" style="color:var(--muted)">${badge}</span></div>
     <div class="teams">
       <div class="team"><span class="flag">${i1.flag}</span><span class="tname">${i1.ar}</span></div>
-      <div class="score-in">
-        <input class="num adm1" type="number" min="0" inputmode="numeric" value="${s1}"/>
-        <span class="dash">−</span>
-        <input class="num adm2" type="number" min="0" inputmode="numeric" value="${s2}"/>
-      </div>
+      ${mid}
       <div class="team"><span class="flag">${i2.flag}</span><span class="tname">${i2.ar}</span></div>
     </div>
-    <div class="actions">
-      <button class="save" onclick="saveResult(${m.id})">حفظ النتيجة</button>
-      ${m.manual?`<button class="dbl-btn" onclick="clearResult(${m.id})">إلغاء اليدوي</button>`:''}
-    </div>
+    ${countLine}
+    ${actions}
   </div>`;
 }
 
