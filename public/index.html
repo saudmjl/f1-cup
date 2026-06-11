@@ -218,7 +218,7 @@
       <button class="tab on" id="tabMatches" onclick="showTab('matches')">المباريات</button>
       <button class="tab" id="tabBoard" onclick="showTab('board')">الترتيب</button>
       <button class="tab" id="tabStats" onclick="showTab('stats')">الإحصائيات</button>
-      <button class="tab" id="tabReveal" onclick="showTab('reveal')" style="display:none">شيك نتايج غيرك</button>
+      <button class="tab" id="tabReveal" onclick="showTab('reveal')">شيك نتايج غيرك</button>
     </div>
     <div id="matchesView"><div class="loading"><div class="spin"></div></div></div>
     <div id="boardView" style="display:none"><div class="loading"><div class="spin"></div></div></div>
@@ -284,8 +284,6 @@ function showApp(){
   document.getElementById("loginView").style.display="none";
   document.getElementById("appView").style.display="block";
   document.getElementById("meName").textContent = meName;
-  // تبويب «الكشف»: مخفي إلا في وضع المعاينة (?preview=1) — مؤقتًا للتجربة
-  if (location.search.includes("preview=1")) document.getElementById("tabReveal").style.display = "";
   loadMatches();
 }
 
