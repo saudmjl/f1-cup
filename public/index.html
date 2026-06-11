@@ -225,6 +225,8 @@ function showTab(t){
 // ─── المباريات ───
 async function loadMatches(){
   const view = document.getElementById("matchesView");
+  // تحديث النتائج من openfootball في الخلفية (مجاني، بدون تعطيل التحميل)
+  fetch("/api/sync").catch(()=>{});
   try{
     const r = await fetch("/api/predictions?token="+encodeURIComponent(token));
     if(r.status===401){ logout(); return; }
