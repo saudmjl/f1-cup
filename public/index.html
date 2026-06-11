@@ -112,6 +112,33 @@
   .loading{text-align:center;color:var(--muted);padding:60px 20px}
   .spin{display:inline-block;width:26px;height:26px;border:3px solid var(--line-strong);border-top-color:var(--pitch);border-radius:50%;animation:sp 1s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
+
+  /* منتقي الجولات */
+  .rounds{display:flex;gap:8px;overflow-x:auto;padding:4px 2px 10px;margin-bottom:6px;-webkit-overflow-scrolling:touch}
+  .rounds::-webkit-scrollbar{height:0}
+  .round-btn{flex:none;padding:8px 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-family:inherit;font-weight:800;font-size:.82rem;cursor:pointer;white-space:nowrap}
+  .round-btn.on{background:linear-gradient(180deg,var(--pitch),var(--pitch-deep));color:#fff;border-color:var(--pitch)}
+  .round-nav{display:flex;justify-content:space-between;gap:10px;margin:4px 0 16px}
+  .round-nav button{flex:1;padding:10px;border-radius:11px;border:1px solid var(--line-strong);background:rgba(255,255,255,.03);color:var(--txt);font-family:inherit;font-weight:800;font-size:.85rem;cursor:pointer}
+  .round-nav button:disabled{opacity:.35;cursor:not-allowed}
+
+  /* الإحصائيات */
+  .stat-head{display:grid;grid-template-columns:34px 1fr auto auto;gap:12px;padding:11px 15px;color:var(--muted);font-size:.74rem;font-weight:800;border-bottom:1px solid var(--line)}
+  .stat-row{display:grid;grid-template-columns:34px 1fr auto auto;align-items:center;gap:12px;padding:13px 15px;border-bottom:1px solid var(--line)}
+  .stat-row:last-child{border-bottom:none}
+  .stat-row.me{background:rgba(74,125,255,.08)}
+  .stat-num{font-weight:900;font-size:1.05rem;text-align:center;min-width:46px}
+  .stat-num small{display:block;color:var(--muted);font-weight:600;font-size:.6rem}
+  .stat-exact{color:var(--gold)}
+  .stat-outcome{color:var(--pitch)}
+
+  /* التعليمات */
+  .howto{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;margin-top:16px;font-size:.86rem;color:var(--muted);line-height:1.9}
+  .howto h3{color:var(--txt);font-size:.98rem;margin-bottom:8px}
+  .howto b{color:var(--txt)}
+  .pts-pill{display:inline-block;background:var(--pitch-deep);color:#fff;border-radius:8px;padding:1px 8px;font-weight:800;font-size:.8rem;margin:0 2px}
+  .pts-pill.gold{background:var(--gold-deep);color:#231c00}
+  .howto-app{margin:0 0 18px}
 </style>
 </head>
 <body>
@@ -141,6 +168,17 @@
     <button class="submit" id="btnSubmit" onclick="submitAuth()">دخول</button>
     <div class="err-msg" id="authErr"></div>
   </div>
+
+  <div class="howto">
+    <h3>📋 كيف تلعب؟</h3>
+    توقّع نتيجة كل مباراة قبل صافرة البداية — وبعدها <b>تُقفل تلقائيًا</b>.<br>
+    في كل جولة اختر <b>مباراة واحدة «دبل ×٢»</b> تتضاعف نقاطها (٣ دبل في دور المجموعات).<br>
+    <h3 style="margin-top:14px">🏆 احتساب النقاط</h3>
+    نتيجة دقيقة صحيحة <span class="pts-pill gold">٥٠</span><br>
+    توقّع الفائز صح فقط <span class="pts-pill">٢٠</span><br>
+    توقّع خاطئ <span class="pts-pill" style="background:#3a3a3a">٠</span><br>
+    مباراة الدبل: النقاط <b>×٢</b> (دقيقة = ١٠٠، فائز = ٤٠).
+  </div>
 </div>
 
 <!-- ░░░ التطبيق ░░░ -->
@@ -153,9 +191,11 @@
     <div class="tabs">
       <button class="tab on" id="tabMatches" onclick="showTab('matches')">المباريات</button>
       <button class="tab" id="tabBoard" onclick="showTab('board')">الترتيب</button>
+      <button class="tab" id="tabStats" onclick="showTab('stats')">الإحصائيات</button>
     </div>
     <div id="matchesView"><div class="loading"><div class="spin"></div></div></div>
     <div id="boardView" style="display:none"><div class="loading"><div class="spin"></div></div></div>
+    <div id="statsView" style="display:none"><div class="loading"><div class="spin"></div></div></div>
   </div>
 </div>
 
@@ -163,7 +203,8 @@
 
 <script>
 let mode = "login", token = null, meName = null, isAdmin = false;
-let serverNow = null, doubleByDay = {};
+let serverNow = null, doubleByRound = {};
+let allMatches = [], allPreds = {}, currentRound = null;
 
 // استرجاع الجلسة المحفوظة
 token = sessionStorage.getItem("f1_token");
@@ -217,9 +258,12 @@ function showApp(){
 function showTab(t){
   document.getElementById("tabMatches").classList.toggle("on", t==="matches");
   document.getElementById("tabBoard").classList.toggle("on", t==="board");
+  document.getElementById("tabStats").classList.toggle("on", t==="stats");
   document.getElementById("matchesView").style.display = t==="matches"?"block":"none";
   document.getElementById("boardView").style.display = t==="board"?"block":"none";
+  document.getElementById("statsView").style.display = t==="stats"?"block":"none";
   if(t==="board") loadBoard();
+  if(t==="stats") loadStats();
 }
 
 // ─── المباريات ───
@@ -236,54 +280,74 @@ async function loadMatches(){
   }catch(e){ view.innerHTML = '<div class="empty">تعذّر تحميل المباريات</div>'; }
 }
 
-// مفتاح اليوم التقويمي لمباراة (UTC) — نفس ما يستخدمه الخادم
-function dayKey(m){ return new Date(m.kickoff).toISOString().slice(0,10); }
+// الجولات المتوفّرة فعليًا، مرتّبة
+function roundsPresent(){
+  const set = new Set(allMatches.map(m=>roundKey(m.matchday)));
+  return ROUND_ORDER.filter(k=>set.has(k));
+}
 
 function renderMatches(matches, preds, view){
-  // اكتشف مباراة الدبل الحالية لكل يوم تقويمي
-  doubleByDay = {};
+  allMatches = matches; allPreds = preds;
+  // اكتشف مباراة الدبل الحالية لكل جولة
+  doubleByRound = {};
   for(const m of matches){
     const p = preds[m.id];
-    if(p && p.is_double) doubleByDay[dayKey(m)] = m.id;
+    if(p && p.is_double) doubleByRound[roundKey(m.matchday)] = m.id;
   }
+  // اختر الجولة الافتراضية: أول جولة فيها مباراة لم تبدأ بعد، وإلا آخر جولة
+  const rounds = roundsPresent();
+  if(!rounds.length){ view.innerHTML = '<div class="empty">لا توجد مباريات</div>'; return; }
+  if(!currentRound || !rounds.includes(currentRound)){
+    currentRound = rounds.find(rk =>
+      allMatches.some(m=>roundKey(m.matchday)===rk && new Date(m.kickoff) > serverNow)
+    ) || rounds[rounds.length-1];
+  }
+  renderRound(view);
+}
 
-  // جمّع حسب اليوم (التاريخ)
+function renderRound(view){
+  view = view || document.getElementById("matchesView");
+  const rounds = roundsPresent();
+  const idx = rounds.indexOf(currentRound);
+  const list = allMatches
+    .filter(m=>roundKey(m.matchday)===currentRound)
+    .sort((a,b)=> new Date(a.kickoff)-new Date(b.kickoff));
+
+  // شريط منتقي الجولات
+  let sel = '<div class="rounds">';
+  for(const rk of rounds){
+    sel += `<button class="round-btn ${rk===currentRound?'on':''}" onclick="gotoRound('${rk}')">${ROUND_LABELS[rk]||rk}</button>`;
+  }
+  sel += '</div>';
+
+  // عنوان الجولة + تلميح الدبل
+  let html = sel + `<div class="howto-app dbl-hint">⚡ اختر مباراة واحدة من هذه الجولة تتضاعف نقاطها (دبل ×٢)</div>`;
+  // تجميع مباريات الجولة حسب اليوم لسهولة القراءة
   const byDate = {};
-  for(const m of matches){
-    const dt = new Date(m.kickoff);
-    const key = dt.toISOString().slice(0,10);
-    (byDate[key] = byDate[key] || []).push(m);
-  }
-  const dates = Object.keys(byDate).sort();
-
-  // أظهر اليوم الحالي وما بعده فقط (مع آخر يوم منتهٍ للمراجعة)
-  let html = "";
-  const todayKey = serverNow.toISOString().slice(0,10);
-  const visible = dates.filter(dk => dk >= todayKey).slice(0,4);
-  if(visible.length===0){
-    // كله انتهى — أظهر آخر يومين
-    visible.push(...dates.slice(-2));
-  }
-
-  for(const dk of visible){
-    const list = byDate[dk].sort((a,b)=> new Date(a.kickoff)-new Date(b.kickoff));
+  for(const m of list){ const k = new Date(m.kickoff).toISOString().slice(0,10); (byDate[k]=byDate[k]||[]).push(m); }
+  for(const dk of Object.keys(byDate).sort()){
     const dlabel = new Date(dk+"T12:00:00").toLocaleDateString("ar",{weekday:"long",day:"numeric",month:"long"});
-    const dayId = list[0].matchday;
-    html += `<div class="day-group">
-      <div class="day-head"><h3>${dlabel}</h3><span class="dh-meta">${list.length} مباريات</span></div>
-      <p class="dbl-hint">⚡ اختر مباراة وحدة من اليوم تضاعف نقاطها</p>`;
-    for(const m of list){ html += matchCard(m, preds[m.id]); }
+    html += `<div class="day-group"><div class="day-head"><h3>${dlabel}</h3><span class="dh-meta">${byDate[dk].length} مباريات</span></div>`;
+    for(const m of byDate[dk]){ html += matchCard(m, allPreds[m.id]); }
     html += `</div>`;
   }
-  view.innerHTML = html || '<div class="empty">لا توجد مباريات</div>';
-  wireMatchEvents(matches, preds);
+  // أزرار التنقّل بين الجولات
+  html += `<div class="round-nav">
+    <button onclick="gotoRound('${rounds[idx+1]||''}')" ${idx>=rounds.length-1?'disabled':''}>الجولة التالية ←</button>
+    <button onclick="gotoRound('${rounds[idx-1]||''}')" ${idx<=0?'disabled':''}>→ الجولة السابقة</button>
+  </div>`;
+
+  view.innerHTML = html;
+  wireMatchEvents(allMatches, allPreds);
 }
+
+function gotoRound(rk){ if(!rk) return; currentRound = rk; renderRound(); window.scrollTo({top:0,behavior:'smooth'}); }
 
 function matchCard(m, pred){
   const info1 = teamInfo(m.team1), info2 = teamInfo(m.team2);
   const locked = new Date(m.kickoff) <= serverNow;
   const finished = m.status==="finished";
-  const isDbl = doubleByDay[dayKey(m)]===m.id;
+  const isDbl = doubleByRound[roundKey(m.matchday)]===m.id;
   const p1 = pred ? pred.pred1 : "";
   const p2 = pred ? pred.pred2 : "";
   const saved = !!pred;
@@ -377,6 +441,32 @@ async function loadBoard(){
     html += '</div>';
     view.innerHTML = html;
   }catch(e){ view.innerHTML='<div class="empty">تعذّر تحميل الترتيب</div>'; }
+}
+
+// ─── الإحصائيات ───
+async function loadStats(){
+  const view = document.getElementById("statsView");
+  view.innerHTML = '<div class="loading"><div class="spin"></div></div>';
+  try{
+    const r = await fetch("/api/stats");
+    const d = await r.json();
+    const st = (d.stats||[]);
+    if(st.length===0){ view.innerHTML='<div class="empty">لا توجد إحصائيات بعد</div>'; return; }
+    let html = `<div class="howto-app dbl-hint">📊 ترتيب اللاعبين حسب النتائج الدقيقة الصحيحة ثم توقّعات الفائز الصحيحة</div>`;
+    html += `<div class="board">
+      <div class="stat-head"><div>#</div><div>اللاعب</div><div style="text-align:center">دقيقة صح</div><div style="text-align:center">فائز صح</div></div>`;
+    st.forEach((p,i)=>{
+      const me = p.name===meName;
+      html += `<div class="stat-row ${me?'me':''}">
+        <div class="rank">${i===0?'🥇':(i===1?'🥈':(i===2?'🥉':i+1))}</div>
+        <div class="player"><span class="ava">${p.name[0]}</span>${p.name} ${me?'<span class="me-tag">أنت</span>':''}</div>
+        <div class="stat-num stat-exact">${p.exact_count}<small>نتيجة</small></div>
+        <div class="stat-num stat-outcome">${p.outcome_count}<small>مباراة</small></div>
+      </div>`;
+    });
+    html += '</div>';
+    view.innerHTML = html;
+  }catch(e){ view.innerHTML='<div class="empty">تعذّر تحميل الإحصائيات</div>'; }
 }
 
 let tT;
