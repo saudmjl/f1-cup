@@ -42,15 +42,26 @@ export default async function handler(req, res) {
       return json(res, 403, { error: "أُقفلت — بدأت المباراة" });
     }
 
-    // الدبل: مباراة واحدة لكل جولة. نلغي الدبل عن بقية مباريات نفس الجولة لنفس اللاعب.
+    // الدبل: مباراة واحدة لكل جولة، ويُقفل بمجرد أن تبدأ مباراته (لا يُنقَل بعدها).
     if (isDouble) {
       const rk = roundKey(match.matchday);
-      const { data: allMatches } = await db.from("matches").select("id,matchday");
-      const ids = (allMatches || [])
-        .filter(m => roundKey(m.matchday) === rk)
-        .map(m => m.id);
+      const { data: allMatches } = await db.from("matches").select("id,matchday,kickoff");
+      const roundIds = (allMatches || []).filter(m => roundKey(m.matchday) === rk).map(m => m.id);
+
+      // إن كان دبل هذه الجولة موضوعًا على مباراة بدأت بالفعل → لا يُسمح بنقله
+      const { data: myRound } = await db.from("predictions")
+        .select("match_id,is_double").eq("player_id", user.id).in("match_id", roundIds);
+      const lockedDbl = (myRound || []).find(p => {
+        if (!p.is_double || p.match_id === matchId) return false;
+        const dm = (allMatches || []).find(m => m.id === p.match_id);
+        return dm && new Date(dm.kickoff) <= new Date();
+      });
+      if (lockedDbl) {
+        return json(res, 403, { error: "دبل هذه الجولة مُقفل — مباراة الدبل بدأت بالفعل" });
+      }
+
       await db.from("predictions").update({ is_double: false })
-        .eq("player_id", user.id).in("match_id", ids);
+        .eq("player_id", user.id).in("match_id", roundIds);
     }
 
     await db.from("predictions").upsert({
