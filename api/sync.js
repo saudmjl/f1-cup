@@ -25,8 +25,21 @@ function toKickoff(date, time) {
   return d.toISOString();
 }
 
+const THROTTLE_MS = 3 * 60 * 1000;   // مزامنة فعلية مرة كل 3 دقائق كحد أقصى
+
 export default async function handler(req, res) {
   try {
+    // ── مكابح: نتفادى المزامنة المتكررة (يستدعيها كل لاعب عند الفتح) ──
+    const force = req.query && (req.query.force === "1");
+    if (!force) {
+      const { data: recent } = await db.from("matches")
+        .select("updated_at").order("updated_at", { ascending: false }).limit(1);
+      const last = recent && recent[0] ? new Date(recent[0].updated_at).getTime() : 0;
+      if (Date.now() - last < THROTTLE_MS) {
+        return json(res, 200, { ok: true, skipped: true });
+      }
+    }
+
     const r = await fetch(SOURCE, { cache: "no-store" });
     const data = await r.json();
     const rows = [];
