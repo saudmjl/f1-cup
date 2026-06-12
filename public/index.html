@@ -175,6 +175,13 @@
   .countdown .cd-seg b{font-size:1rem;line-height:1.1}
   .countdown .cd-seg span{font-size:.6rem;color:var(--muted);font-weight:600}
   .countdown .cd-sep{color:var(--muted);font-weight:900}
+  /* مؤشّر «جارية الآن» المباشر (من ESPN) */
+  .live-badge{display:flex;align-items:center;justify-content:center;gap:7px;margin:2px 0 4px;
+    font-family:'Rubik',monospace;font-weight:800;font-size:.82rem;color:var(--red);
+    background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.35);border-radius:10px;padding:6px 10px}
+  .live-badge .lv-dot{width:9px;height:9px;border-radius:50%;background:var(--red);animation:lvPulse 1s ease-in-out infinite}
+  @keyframes lvPulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.3;transform:scale(.65)}}
+  .live-badge b{font-size:.95rem}
   /* بانر "أضِف للشاشة الرئيسية" (آيفون) */
   /* نافذة تثبيت التطبيق — كبيرة في نص الشاشة */
   #a2hs{display:none;position:fixed;inset:0;z-index:9999;background:rgba(5,8,7,.72);
@@ -535,6 +542,7 @@ async function loadMatches(){
     document.getElementById("tabAdmin").style.display = isAdmin ? "" : "none";
     renderMatches(d.matches, d.predictions, view);
     startCountdownTimer();
+    startLiveTimer();
   }catch(e){ view.innerHTML = '<div class="empty">تعذّر تحميل المباريات</div>'; }
 }
 
@@ -597,6 +605,7 @@ function renderRound(view){
 
   view.innerHTML = html;
   wireMatchEvents(allMatches, allPreds);
+  applyLive();
 }
 
 function gotoRound(rk){ if(!rk) return; currentRound = rk; renderRound(); window.scrollTo({top:0,behavior:'smooth'}); }
@@ -632,6 +641,70 @@ function updateCountdowns(){
     el.classList.toggle("soon", s < 3600);   // أقل من ساعة
     el.innerHTML = "⏳ " + cdSeg(toAr(d),"يوم") + cdSep() + cdSeg(pad2(h),"ساعة") + cdSep() + cdSeg(pad2(m),"دقيقة") + cdSep() + cdSeg(pad2(sec),"ثانية");
   });
+}
+
+// ─── حالة المباريات المباشرة: متصفّح اللاعب يجيبها مباشرة من ESPN (صفر حِمل على السيرفر) ───
+let liveStatus = {}, liveTimer = null;
+function lvNorm(s){ let x=String(s||"").toLowerCase().replace(/[^a-z]/g,"");
+  if(x.includes("czech"))return"czech"; if(x.includes("bosnia"))return"bosnia";
+  if(x==="usa"||x.includes("unitedstates"))return"usa"; if(x.includes("korea"))return"korea";
+  if(x.includes("ivor")||x.includes("cotedivoire"))return"ivory"; if(x.includes("congo"))return"congo";
+  if(x.includes("turk"))return"turkey"; if(x.includes("curacao")||x.includes("curaao"))return"curacao";
+  return x; }
+function lvPair(a,b){ return [lvNorm(a),lvNorm(b)].sort().join("|"); }
+function liveWindowActive(){
+  const now = Date.now()+clockOffset;
+  return (allMatches||[]).some(m=>{ const k=new Date(m.kickoff).getTime();
+    return m.status!=="finished" && k<=now && (now-k) < 3*3600*1000; });   // بدأت قبل أقل من 3 ساعات ولم تُحتسب
+}
+async function fetchLive(){
+  try{
+    if(!liveWindowActive()){ liveStatus={}; applyLive(); return; }   // لا مباراة في نافذة البث — لا تتصل
+    const now = new Date(Date.now()+clockOffset);
+    const dates = [];
+    for(let off=-1; off<=0; off++){ const d=new Date(now); d.setUTCDate(d.getUTCDate()+off);
+      dates.push(`${d.getUTCFullYear()}${pad2(d.getUTCMonth()+1)}${pad2(d.getUTCDate())}`); }
+    const map = {};
+    for(const dt of dates){
+      try{
+        const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${dt}`,{cache:"no-store"});
+        const dd = await r.json();
+        for(const ev of dd.events||[]){
+          const c = ev.competitions?.[0]?.competitors||[];
+          const h = c.find(x=>x.homeAway==="home"), a = c.find(x=>x.homeAway==="away");
+          if(!h||!a) continue;
+          map[lvPair(h.team?.displayName, a.team?.displayName)] = {
+            state: ev.status?.type?.state,
+            detail: ev.status?.type?.shortDetail || ev.status?.type?.detail || "",
+            home: h.team?.displayName, hs: h.score, as: a.score };
+        }
+      }catch(e){}
+    }
+    liveStatus = map; applyLive();
+  }catch(e){}
+}
+function applyLive(){
+  document.querySelectorAll('.card').forEach(card=>{
+    const m = (allMatches||[]).find(x=>x.id===parseInt(card.dataset.match)); if(!m) return;
+    const st = liveStatus[lvPair(m.team1, m.team2)];
+    let badge = card.querySelector('.live-badge');
+    if(st && st.state==="in"){
+      let scoreTxt = "";
+      if(st.hs!=null && st.as!=null){
+        let s1, s2;
+        if(lvNorm(st.home)===lvNorm(m.team1)){ s1=st.hs; s2=st.as; } else { s1=st.as; s2=st.hs; }
+        scoreTxt = ` · <b dir="ltr">${s2} − ${s1}</b>`;
+      }
+      if(!badge){ badge=document.createElement('div'); badge.className='live-badge';
+        const teams=card.querySelector('.teams'); if(teams) teams.insertAdjacentElement('afterend', badge); else card.appendChild(badge); }
+      badge.innerHTML = `<span class="lv-dot"></span> جارية الآن · ${st.detail}${scoreTxt}`;
+    } else if(badge){ badge.remove(); }
+  });
+}
+function startLiveTimer(){
+  fetchLive();
+  if(liveTimer) return;
+  liveTimer = setInterval(fetchLive, 45000);   // كل 45 ثانية، من المتصفح فقط
 }
 
 function matchCard(m, pred){
