@@ -400,18 +400,6 @@ function showApp(){
   loadMatches();
   registerSW();
   updateNotifBar();
-  setupStickyTabs();
-}
-
-// ظل خفيف للتبويبات عند ثباتها أعلى الصفحة
-let _stickyBound = false;
-function setupStickyTabs(){
-  const el = document.querySelector(".tabs");
-  if (!el || _stickyBound) return;
-  _stickyBound = true;
-  const onScroll = () => { el.classList.toggle("stuck", el.getBoundingClientRect().top <= 53); };
-  window.addEventListener("scroll", onScroll, { passive: true });
-  onScroll();
 }
 
 function showTab(t){
@@ -814,6 +802,12 @@ function toast(msg, isErr){
   t.textContent=msg; t.classList.toggle("err",!!isErr); t.classList.add("show");
   clearTimeout(tT); tT=setTimeout(()=>t.classList.remove("show"),2400);
 }
+
+// ثبات شريط التبويبات أعلى الصفحة + ظل خفيف عند الالتصاق (ربط عام مضمون)
+window.addEventListener("scroll", function(){
+  var el = document.querySelector(".tabs");
+  if (el) el.classList.toggle("stuck", el.getBoundingClientRect().top <= 53);
+}, { passive: true });
 </script>
 </body>
 </html>
