@@ -306,7 +306,7 @@ async function registerSW(){ try{ if("serviceWorker" in navigator) return await 
 async function enableNotifs(){
   try{
     if(!pushSupported()){ toast("جهازك لا يدعم الإشعارات", true); return; }
-    if(isIOSdevice() && !isStandalone()){ toast("ثبّت التطبيق أول: مشاركة ⬆️ ← إضافة إلى الشاشة الرئيسية", true); return; }
+    if(isIOSdevice() && !isStandalone()){ toast("ثبّت التطبيق أول: Share ⬆️ ← Add to Home Screen", true); return; }
     const reg = await registerSW();
     if(!reg){ toast("تعذّر التفعيل", true); return; }
     await navigator.serviceWorker.ready;
