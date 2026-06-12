@@ -1006,7 +1006,7 @@ window.addEventListener("scroll", function(){
     var list=visibleTabs();
     var cur=list.findIndex(function(x){ return document.getElementById(x.t).classList.contains("on"); });
     if(cur<0) return;
-    var dir = dx<0 ? 1 : -1;             // سحب لليسار = التبويب التالي (RTL)
+    var dir = dx<0 ? -1 : 1;             // عكس الاتجاه حسب طلب المستخدم
     var ni=cur+dir;
     if(ni<0 || ni>=list.length) return;
     showTab(list[ni].k);
