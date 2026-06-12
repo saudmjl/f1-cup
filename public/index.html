@@ -41,7 +41,8 @@
   .who b{color:var(--txt)}
   .logout{background:none;border:1px solid var(--line);color:var(--muted);border-radius:8px;padding:4px 10px;font-family:inherit;font-size:.75rem;cursor:pointer}
 
-  .tabs{display:flex;gap:8px;margin:18px 0 20px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:5px}
+  .tabs{display:flex;gap:8px;margin:14px 0 18px;background:rgba(16,24,20,.9);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border:1px solid var(--line);border-radius:14px;padding:5px;position:sticky;top:52px;z-index:40;transition:box-shadow .2s,border-color .2s}
+  .tabs.stuck{box-shadow:0 12px 26px -16px rgba(0,0,0,.75);border-color:var(--line-strong)}
   .tab{flex:1;text-align:center;padding:10px;border-radius:10px;font-family:inherit;font-weight:800;font-size:.9rem;color:var(--muted);background:none;border:none;cursor:pointer;transition:.15s}
   .tab.on{background:linear-gradient(180deg,rgba(14,159,90,.25),rgba(14,159,90,.12));color:#fff}
 
@@ -348,9 +349,11 @@ async function remindNext(btn){
   if(btn){ btn.disabled=false; btn.textContent="🔔 ذكّر اللي ما توقّعوا في المباراة القادمة"; }
 }
 
-// استرجاع الجلسة المحفوظة
-token = sessionStorage.getItem("f1_token");
-meName = sessionStorage.getItem("f1_name");
+// استرجاع الجلسة المحفوظة (تبقى محفوظة حتى بعد إغلاق المتصفح/التطبيق)
+try {
+  token = localStorage.getItem("f1_token") || sessionStorage.getItem("f1_token");
+  meName = localStorage.getItem("f1_name") || sessionStorage.getItem("f1_name");
+} catch (e) {}
 if (token && meName) showApp();
 
 function setMode(m){
@@ -378,14 +381,14 @@ async function submitAuth(){
     const d = await r.json();
     if(!r.ok){ err.textContent = d.error || "خطأ"; return; }
     token = d.token; meName = d.name; isAdmin = d.isAdmin;
-    sessionStorage.setItem("f1_token", token);
-    sessionStorage.setItem("f1_name", meName);
+    try { localStorage.setItem("f1_token", token); localStorage.setItem("f1_name", meName); } catch (e) {}
     showApp();
   }catch(e){ err.textContent = "تعذّر الاتصال — حاول مرة ثانية"; }
 }
 
 function logout(){
-  sessionStorage.clear(); token=null; meName=null;
+  try { localStorage.removeItem("f1_token"); localStorage.removeItem("f1_name"); sessionStorage.clear(); } catch (e) {}
+  token=null; meName=null;
   document.getElementById("appView").style.display="none";
   document.getElementById("loginView").style.display="block";
 }
@@ -397,6 +400,18 @@ function showApp(){
   loadMatches();
   registerSW();
   updateNotifBar();
+  setupStickyTabs();
+}
+
+// ظل خفيف للتبويبات عند ثباتها أعلى الصفحة
+let _stickyBound = false;
+function setupStickyTabs(){
+  const el = document.querySelector(".tabs");
+  if (!el || _stickyBound) return;
+  _stickyBound = true;
+  const onScroll = () => { el.classList.toggle("stuck", el.getBoundingClientRect().top <= 53); };
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
 }
 
 function showTab(t){
