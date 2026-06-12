@@ -197,7 +197,7 @@
 <!-- بانر إضافة للشاشة الرئيسية (آيفون فقط) -->
 <div id="a2hs">
   <img class="ic" src="/icon-192.png" alt=""/>
-  <div class="tx">ثبّت التطبيق على جوالك: اضغط زر <b class="shr">Share ⬆️</b> ثم اختر <b>Add to Home Screen</b></div>
+  <div class="tx">ثبّت التطبيق على جوالك: اضغط زر <b class="shr">Share <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 15V4"/><path d="M8.5 7.5 12 4l3.5 3.5"/><path d="M8 10H6v10h12V10h-2"/></svg></b> ثم اختر <b>Add to Home Screen</b></div>
   <button class="x" onclick="dismissA2HS()" aria-label="إغلاق">×</button>
 </div>
 <script>
@@ -306,7 +306,7 @@ async function registerSW(){ try{ if("serviceWorker" in navigator) return await 
 async function enableNotifs(){
   try{
     if(!pushSupported()){ toast("جهازك لا يدعم الإشعارات", true); return; }
-    if(isIOSdevice() && !isStandalone()){ toast("ثبّت التطبيق أول: Share ⬆️ ← Add to Home Screen", true); return; }
+    if(isIOSdevice() && !isStandalone()){ toast("ثبّت التطبيق أول: زر Share ← Add to Home Screen", true); return; }
     const reg = await registerSW();
     if(!reg){ toast("تعذّر التفعيل", true); return; }
     await navigator.serviceWorker.ready;
@@ -328,7 +328,7 @@ function updateNotifBar(){
   if(granted && on){ bar.style.display="none"; return; }
   const txt=document.getElementById("notifTxt"), btn=document.getElementById("notifBtn");
   if(isIOSdevice() && !isStandalone()){
-    txt.textContent="🔔 ثبّت التطبيق أول: Share ⬆️ ← Add to Home Screen — عشان توصلك التذكيرات";
+    txt.innerHTML='🔔 ثبّت التطبيق أول: Share <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 15V4"/><path d="M8.5 7.5 12 4l3.5 3.5"/><path d="M8 10H6v10h12V10h-2"/></svg> ← Add to Home Screen — عشان توصلك التذكيرات';
     btn.style.display="none";
   } else if(pushSupported()){
     txt.textContent="🔔 فعّل التذكيرات ليوصلك تنبيه قبل كل مباراة";
