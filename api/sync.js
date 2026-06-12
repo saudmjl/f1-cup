@@ -110,6 +110,39 @@ export default async function handler(req, res) {
       }
     } catch (e) { /* تجاهل تعذّر مصدر النتائج */ }
 
+    // ── طبقة ESPN (مصدر موثوق ومباشر، بدون مفتاح) — لها الكلمة الأخيرة ──
+    try {
+      const byPair = {};
+      for (const row of rows) byPair[pairKey(row.team1, row.team2)] = row;
+      // نافذة تواريخ حول اليوم لالتقاط المباريات المباشرة والمنتهية حديثًا (UTC)
+      const today = new Date();
+      const dates = [];
+      for (let off = -4; off <= 2; off++) {
+        const d = new Date(today); d.setUTCDate(d.getUTCDate() + off);
+        dates.push(`${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}${String(d.getUTCDate()).padStart(2, "0")}`);
+      }
+      for (const dt of dates) {
+        try {
+          const er = await fetch(`https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=${dt}`, { cache: "no-store" });
+          const ed = await er.json();
+          for (const ev of ed.events || []) {
+            if (ev.status?.type?.state !== "post") continue;     // المنتهية فقط
+            const comp = ev.competitions?.[0]; if (!comp) continue;
+            const c = comp.competitors || [];
+            const home = c.find(x => x.homeAway === "home"), away = c.find(x => x.homeAway === "away");
+            if (!home || !away) continue;
+            const hs = parseInt(home.score), as = parseInt(away.score);
+            if (!(hs >= 0) || !(as >= 0)) continue;
+            const row = byPair[pairKey(home.team?.displayName, away.team?.displayName)];
+            if (!row || row.manual) continue;                    // النتيجة اليدوية لها الأولوية
+            if (normTeam(home.team?.displayName) === normTeam(row.team1)) { row.score1 = hs; row.score2 = as; }
+            else { row.score1 = as; row.score2 = hs; }
+            row.status = "finished";
+          }
+        } catch (e) { /* تجاهل يوم فاشل */ }
+      }
+    } catch (e) { /* تجاهل تعذّر ESPN */ }
+
     // upsert المباريات
     await db.from("matches").upsert(rows, { onConflict: "id" });
 
