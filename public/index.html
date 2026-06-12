@@ -191,6 +191,17 @@
   .notif-bar span{flex:1;line-height:1.5}
   .notif-bar button{flex:0 0 auto;background:var(--gold);color:#1a1205;border:none;font-family:inherit;
     font-weight:900;font-size:.82rem;padding:8px 16px;border-radius:10px;cursor:pointer}
+  /* قائمة دخول اللاعبين (أدمن) */
+  .usage-wrap{background:var(--panel);border:1px solid var(--line);border-radius:14px;margin:0 0 16px;overflow:hidden}
+  .usage-wrap summary{cursor:pointer;padding:12px 14px;font-weight:800;font-size:.85rem;list-style:none}
+  .usage-wrap summary::-webkit-details-marker{display:none}
+  .usage-wrap summary b{color:var(--pitch)}
+  .usage-list{border-top:1px solid var(--line)}
+  .usage-row{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line);font-size:.8rem}
+  .usage-row:last-child{border-bottom:none}
+  .usage-row .u-name{font-weight:800}
+  .usage-row .u-mode{justify-self:end;white-space:nowrap}
+  .usage-row .u-when{grid-column:1 / -1;font-size:.72rem;display:flex;gap:8px;justify-content:flex-start}
 </style>
 </head>
 <body>
@@ -304,6 +315,22 @@ function isIOSdevice(){ return /iPhone|iPad|iPod/.test(navigator.userAgent) || (
 function isStandalone(){ return window.navigator.standalone===true || window.matchMedia("(display-mode: standalone)").matches; }
 async function registerSW(){ try{ if("serviceWorker" in navigator) return await navigator.serviceWorker.register("/sw.js"); }catch(e){} return null; }
 
+// ─── تسجيل الدخول (تطبيق/متصفح + الجهاز) للأدمن ───
+function platformName(){ if(isIOSdevice()) return "iPhone"; if(/Android/i.test(navigator.userAgent)) return "Android"; return "كمبيوتر"; }
+function reportSeen(){
+  try{ fetch("/api/seen",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({ token, mode: isStandalone()?"app":"browser", platform: platformName() })}); }catch(e){}
+}
+function timeAgoAr(iso){
+  if(!iso) return "لم يدخل بعد";
+  const s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
+  if(s<60) return "قبل لحظات";
+  const m=Math.floor(s/60); if(m<60) return `قبل ${m} دقيقة`;
+  const h=Math.floor(m/60); if(h<24) return `قبل ${h} ساعة`;
+  const d=Math.floor(h/24); if(d<30) return `قبل ${d} يوم`;
+  return new Date(iso).toLocaleDateString("ar");
+}
+
 async function enableNotifs(){
   try{
     if(!pushSupported()){ toast("جهازك لا يدعم الإشعارات", true); return; }
@@ -400,6 +427,7 @@ function showApp(){
   loadMatches();
   registerSW();
   updateNotifBar();
+  reportSeen();
 }
 
 function showTab(t){
@@ -733,6 +761,7 @@ async function loadAdmin(){
     const upcoming=all.filter(m=>new Date(m.kickoff)>now).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff)).slice(0,16);
     let html=`<div class="howto-app dbl-hint">👥 إجمالي اللاعبين: <b>${total}</b> — كم توقّع وكم ما توقّع لكل مباراة، وإدخال النتيجة عند تأخّر المصدر.</div>`;
     html+=`<button class="save" style="width:100%;margin:0 0 14px" onclick="remindNext(this)">🔔 ذكّر اللي ما توقّعوا في المباراة القادمة</button>`;
+    html+=`<div id="usageBox"></div>`;
     if(started.length){
       html+='<div class="day-head"><h3>المباريات التي بدأت</h3></div>';
       html+=started.map(m=>adminRow(m,counts[m.id]||0,total,true)).join("");
@@ -742,7 +771,36 @@ async function loadAdmin(){
       html+=upcoming.map(m=>adminRow(m,counts[m.id]||0,total,false)).join("");
     }
     view.innerHTML=html || '<div class="empty">لا توجد مباريات</div>';
+    loadUsage();
   }catch(e){ view.innerHTML='<div class="empty">تعذّر التحميل</div>'; }
+}
+
+// قائمة دخول اللاعبين (للأدمن): تطبيق/متصفح + الجهاز + آخر دخول + العدد
+async function loadUsage(){
+  const box=document.getElementById("usageBox"); if(!box) return;
+  box.innerHTML='<div class="loading" style="padding:14px"><div class="spin"></div></div>';
+  try{
+    const r=await fetch("/api/usage?token="+encodeURIComponent(token));
+    if(!r.ok){ box.innerHTML=''; return; }
+    const d=await r.json();
+    const rows=(d.players||[]).map(p=>{
+      const entered=p.last_open;
+      const mode = !entered ? '<span style="color:var(--muted)">—</span>'
+        : (p.last_mode==="app" ? '<span style="color:var(--pitch)">📱 تطبيق</span>' : '<span style="color:var(--blue)">🌐 متصفح</span>');
+      const plat = entered ? `<span style="color:var(--muted)">${esc(p.platform||"")}</span>` : "";
+      const when = `<span style="color:var(--muted)">${esc(timeAgoAr(entered))}</span>`;
+      const cnt = entered ? `<span style="color:var(--muted)">${p.opens||0}×</span>` : "";
+      return `<div class="usage-row">
+        <span class="u-name">${esc(p.name)}</span>
+        <span class="u-mode">${mode} ${plat}</span>
+        <span class="u-when">${when} ${cnt}</span>
+      </div>`;
+    }).join("");
+    box.innerHTML=`<details class="usage-wrap" open>
+      <summary>📲 دخول اللاعبين — <b>${d.installedCount||0}</b> ثبّتوا التطبيق من <b>${d.total||0}</b></summary>
+      <div class="usage-list">${rows || '<div class="empty">لا يوجد</div>'}</div>
+    </details>`;
+  }catch(e){ box.innerHTML=''; }
 }
 
 function adminRow(m, predicted, total, started){
