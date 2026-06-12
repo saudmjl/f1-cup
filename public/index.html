@@ -219,6 +219,10 @@
   .who-chip{font-size:.72rem;padding:3px 8px;border-radius:8px;background:rgba(14,159,90,.14);color:#bdeccf}
   .who-chip.no{background:rgba(229,72,77,.14);color:#f3b6b8}
   .who-empty{font-size:.72rem;color:var(--muted)}
+  /* حركة الترتيب + مؤشّر الدبل */
+  .mv{font-size:.6rem;font-weight:900;margin-right:3px;display:inline-block;vertical-align:1px}
+  .mv.up{color:var(--pitch)} .mv.down{color:var(--red)} .mv.same{color:var(--muted)}
+  .dbl-tag{color:var(--gold);font-size:.92rem;vertical-align:-1px}
 </style>
 </head>
 <body>
@@ -686,12 +690,19 @@ async function loadBoard(){
     const d = await r.json();
     const lb = d.leaderboard||[];
     if(lb.length===0){ view.innerHTML='<div class="empty">لا يوجد لاعبون بعد</div>'; return; }
-    let html = '<div class="board">';
+    const roundLbl = (typeof ROUND_LABELS!=="undefined" && ROUND_LABELS[d.currentRound]) || "الجولة الحالية";
+    let html = `<div class="howto-app dbl-hint" style="display:flex;gap:14px;flex-wrap:wrap;justify-content:center">
+      <span><b style="color:var(--pitch)">▲</b>/<b style="color:var(--red)">▼</b> الحركة من آخر جولة</span>
+      <span><b style="color:var(--gold)">⚡</b> حاطّ الدبل في ${esc(roundLbl)}</span></div>`;
+    html += '<div class="board">';
     lb.forEach((p,i)=>{
       const me = p.name===meName;
+      const mv = p.movement;
+      const arrow = (mv==null) ? '' : (mv>0 ? `<span class="mv up">▲${mv}</span>` : (mv<0 ? `<span class="mv down">▼${Math.abs(mv)}</span>` : '<span class="mv same">—</span>'));
+      const dbl = p.double_this_round ? '<span class="dbl-tag">⚡</span>' : '';
       html += `<div class="row ${me?'me':''}">
-        <div class="rank">${i===0?'🥇':(i===1?'🥈':(i===2?'🥉':i+1))}</div>
-        <div class="player"><span class="ava">${esc(p.name[0])}</span>${esc(p.name)} ${me?'<span class="me-tag">أنت</span>':''}</div>
+        <div class="rank">${i===0?'🥇':(i===1?'🥈':(i===2?'🥉':i+1))}${arrow}</div>
+        <div class="player"><span class="ava">${esc(p.name[0])}</span>${esc(p.name)} ${dbl} ${me?'<span class="me-tag">أنت</span>':''}</div>
         <div class="score">${p.total_points}<small> نقطة · ${p.correct_preds} صح</small></div>
       </div>`;
     });
