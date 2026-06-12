@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="theme-color" content="#0a0f0d" />
 <title>قروب F1 — توقعات كأس العالم 2026</title>
+<!-- PWA / تطبيق الآيفون -->
+<link rel="manifest" href="/manifest.json" />
+<link rel="apple-touch-icon" href="/icon-180.png" />
+<link rel="icon" type="image/png" href="/icon-192.png" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="قروب F1" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -166,9 +174,37 @@
   .countdown .cd-seg b{font-size:1rem;line-height:1.1}
   .countdown .cd-seg span{font-size:.6rem;color:var(--muted);font-weight:600}
   .countdown .cd-sep{color:var(--muted);font-weight:900}
+  /* بانر "أضِف للشاشة الرئيسية" (آيفون) */
+  #a2hs{display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;
+    background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line-strong);
+    border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);align-items:center;gap:10px}
+  #a2hs .ic{width:40px;height:40px;border-radius:10px;flex:0 0 auto}
+  #a2hs .tx{flex:1;font-size:.82rem;line-height:1.5;color:var(--txt)}
+  #a2hs .tx b{color:var(--gold)}
+  #a2hs .shr{display:inline-block;color:var(--blue);font-weight:900}
+  #a2hs .x{flex:0 0 auto;background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:0 4px}
 </style>
 </head>
 <body>
+
+<!-- بانر إضافة للشاشة الرئيسية (آيفون فقط) -->
+<div id="a2hs">
+  <img class="ic" src="/icon-192.png" alt=""/>
+  <div class="tx">ثبّت التطبيق على جوالك: اضغط زر المشاركة <span class="shr">⬆️</span> ثم اختر <b>«إضافة إلى الشاشة الرئيسية»</b></div>
+  <button class="x" onclick="dismissA2HS()" aria-label="إغلاق">×</button>
+</div>
+<script>
+  function dismissA2HS(){ try{localStorage.setItem('a2hs_done','1')}catch(e){}; var b=document.getElementById('a2hs'); if(b) b.style.display='none'; }
+  (function(){
+    var ua=navigator.userAgent||'';
+    var isIOS=/iPhone|iPad|iPod/.test(ua) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+    var standalone = window.navigator.standalone===true || window.matchMedia('(display-mode: standalone)').matches;
+    var done; try{done=localStorage.getItem('a2hs_done')}catch(e){done=null}
+    if(isIOS && !standalone && !done){
+      setTimeout(function(){ var b=document.getElementById('a2hs'); if(b) b.style.display='flex'; }, 1500);
+    }
+  })();
+</script>
 
 <!-- ░░░ شاشة الدخول ░░░ -->
 <div id="loginView" class="login">
