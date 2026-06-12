@@ -176,14 +176,20 @@
   .countdown .cd-seg span{font-size:.6rem;color:var(--muted);font-weight:600}
   .countdown .cd-sep{color:var(--muted);font-weight:900}
   /* بانر "أضِف للشاشة الرئيسية" (آيفون) */
-  #a2hs{display:none;position:fixed;left:12px;right:12px;bottom:12px;z-index:9999;
-    background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line-strong);
-    border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);align-items:center;gap:10px}
-  #a2hs .ic{width:40px;height:40px;border-radius:10px;flex:0 0 auto}
-  #a2hs .tx{flex:1;font-size:.82rem;line-height:1.5;color:var(--txt)}
-  #a2hs .tx b{color:var(--gold)}
-  #a2hs .shr{display:inline-block;color:var(--blue);font-weight:900}
-  #a2hs .x{flex:0 0 auto;background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:0 4px}
+  /* نافذة تثبيت التطبيق — كبيرة في نص الشاشة */
+  #a2hs{display:none;position:fixed;inset:0;z-index:9999;background:rgba(5,8,7,.72);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:22px;animation:a2hsFade .25s ease}
+  @keyframes a2hsFade{from{opacity:0}to{opacity:1}}
+  .a2hs-card{position:relative;background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line-strong);
+    border-radius:24px;padding:30px 22px 24px;max-width:370px;width:100%;text-align:center;box-shadow:0 30px 70px -20px rgba(0,0,0,.8);animation:a2hsPop .3s cubic-bezier(.2,.9,.3,1.3)}
+  @keyframes a2hsPop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+  .a2hs-card .ic{width:84px;height:84px;border-radius:21px;display:block;margin:0 auto 16px;box-shadow:0 14px 34px -10px rgba(0,0,0,.6)}
+  .a2hs-card h2{font-size:1.45rem;margin:0 0 8px}
+  .a2hs-card .sub{color:var(--muted);font-size:.92rem;line-height:1.6;margin:0 0 20px}
+  .a2hs-steps{text-align:right;background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin:0 0 20px;font-size:.95rem;line-height:2.1}
+  .a2hs-steps b{color:var(--gold)}
+  .a2hs-card .go{width:100%;background:var(--gold);color:#1a1205;border:none;font-family:inherit;font-weight:900;font-size:1.02rem;padding:14px;border-radius:14px;cursor:pointer}
+  .a2hs-card .x{position:absolute;top:12px;left:14px;background:none;border:none;color:var(--muted);font-size:1.5rem;cursor:pointer;line-height:1}
   /* شريط تفعيل التذكيرات */
   .notif-bar{display:flex;align-items:center;gap:10px;margin:0 0 16px;padding:11px 13px;
     background:linear-gradient(180deg,rgba(245,197,66,.12),rgba(245,197,66,.05));
@@ -202,25 +208,47 @@
   .usage-row .u-name{font-weight:800}
   .usage-row .u-mode{justify-self:end;white-space:nowrap}
   .usage-row .u-when{grid-column:1 / -1;font-size:.72rem;display:flex;gap:8px;justify-content:flex-start}
+  /* زر «مين توقّع» + لوحته */
+  .who-btn{width:100%;margin:8px 0 0;background:rgba(74,125,255,.12);border:1px solid rgba(74,125,255,.3);color:var(--blue);
+    font-family:inherit;font-weight:800;font-size:.82rem;padding:8px;border-radius:10px;cursor:pointer}
+  .who-panel{margin:8px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .who-col{background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px;padding:9px 10px}
+  .who-h{font-size:.74rem;font-weight:800;margin:0 0 7px}
+  .who-h.ok{color:var(--pitch)} .who-h.no{color:var(--red)}
+  .who-chips{display:flex;flex-wrap:wrap;gap:5px}
+  .who-chip{font-size:.72rem;padding:3px 8px;border-radius:8px;background:rgba(14,159,90,.14);color:#bdeccf}
+  .who-chip.no{background:rgba(229,72,77,.14);color:#f3b6b8}
+  .who-empty{font-size:.72rem;color:var(--muted)}
 </style>
 </head>
 <body>
 
-<!-- بانر إضافة للشاشة الرئيسية (آيفون فقط) -->
-<div id="a2hs">
-  <img class="ic" src="/icon-192.png" alt=""/>
-  <div class="tx">ثبّت التطبيق على جوالك: اضغط زر <b class="shr">Share <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px"><path d="M12 15V4"/><path d="M8.5 7.5 12 4l3.5 3.5"/><path d="M8 10H6v10h12V10h-2"/></svg></b> ثم اختر <b>Add to Home Screen</b></div>
-  <button class="x" onclick="dismissA2HS()" aria-label="إغلاق">×</button>
+<!-- نافذة تثبيت التطبيق — كبيرة في نص الشاشة -->
+<div id="a2hs" onclick="if(event.target===this)dismissA2HS()">
+  <div class="a2hs-card">
+    <button class="x" onclick="dismissA2HS()" aria-label="إغلاق">×</button>
+    <img class="ic" src="/icon-192.png" alt=""/>
+    <h2>📲 ثبّت التطبيق على جوالك</h2>
+    <div class="sub">توقّع وتابع التذكيرات بضغطة وحدة — يفتح مثل أي تطبيق، بدون ما تفتح المتصفح كل مرة.</div>
+    <div class="a2hs-steps" id="a2hsSteps"></div>
+    <button class="go" onclick="dismissA2HS()">تمام 👍</button>
+  </div>
 </div>
 <script>
   function dismissA2HS(){ try{localStorage.setItem('a2hs_done','1')}catch(e){}; var b=document.getElementById('a2hs'); if(b) b.style.display='none'; }
   (function(){
     var ua=navigator.userAgent||'';
     var isIOS=/iPhone|iPad|iPod/.test(ua) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
+    var isAndroid=/Android/i.test(ua);
     var standalone = window.navigator.standalone===true || window.matchMedia('(display-mode: standalone)').matches;
     var done; try{done=localStorage.getItem('a2hs_done')}catch(e){done=null}
-    if(isIOS && !standalone && !done){
-      setTimeout(function(){ var b=document.getElementById('a2hs'); if(b) b.style.display='flex'; }, 1500);
+    if((isIOS||isAndroid) && !standalone && !done){
+      var share='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 15V4"/><path d="M8.5 7.5 12 4l3.5 3.5"/><path d="M8 10H6v10h12V10h-2"/></svg>';
+      var steps=document.getElementById('a2hsSteps');
+      if(steps){ steps.innerHTML = isIOS
+        ? '<div>1️⃣ افتح الرابط في <b>Safari</b></div><div>2️⃣ اضغط زر <b>Share '+share+'</b> تحت</div><div>3️⃣ اختر <b>Add to Home Screen</b></div>'
+        : '<div>1️⃣ افتح قائمة المتصفح <b>⋮</b></div><div>2️⃣ اختر <b>Add to Home screen</b></div>'; }
+      setTimeout(function(){ var b=document.getElementById('a2hs'); if(b) b.style.display='flex'; }, 1200);
     }
   })();
 </script>
@@ -296,6 +324,7 @@ let mode = "login", token = null, meName = null, isAdmin = false;
 let serverNow = null, doubleByRound = {};
 let allMatches = [], allPreds = {}, currentRound = null;
 let matchCounts = {}, totalPlayers = 0;
+let adminPlayers = [], adminPredByMatch = {};
 let clockOffset = 0, countdownTimer = null;
 
 // تهريب أي رموز HTML في النصوص (حماية من XSS عبر أسماء اللاعبين)
@@ -754,6 +783,9 @@ async function loadAdmin(){
     if(r.status===401){ logout(); return; }
     const d=await r.json();
     if(!d.isAdmin){ view.innerHTML='<div class="empty">هذه الصفحة للأدمن فقط.</div>'; return; }
+    // أسماء من توقّع لكل مباراة (لزر «مين توقّع»)
+    try{ const pr=await fetch("/api/predictors?token="+encodeURIComponent(token)).then(x=>x.json());
+      adminPlayers=pr.players||[]; adminPredByMatch=pr.predByMatch||{}; }catch(e){ adminPlayers=[]; adminPredByMatch={}; }
     const now=new Date(d.now);
     const counts=d.counts||{}, total=d.totalPlayers||0;
     const all=(d.matches||[]);
@@ -816,6 +848,8 @@ function adminRow(m, predicted, total, started){
     ? `<div class="score-in"><input class="num adm1" type="number" min="0" inputmode="numeric" value="${s1}"/><span class="dash">−</span><input class="num adm2" type="number" min="0" inputmode="numeric" value="${s2}"/></div>`
     : `<div class="score-in"><span style="color:var(--muted);font-weight:800">ضد</span></div>`;
   const countLine = `<div class="rv-meta" style="margin:10px 0 0">👥 توقّع <b style="color:var(--pitch)">${predicted}</b> · ما توقّع <b style="color:var(--red)">${notPred}</b> <span style="color:var(--muted)">(من ${total})</span></div>`;
+  const whoBtn = `<button class="who-btn" onclick="showWho(${m.id},this)">👥 مين توقّع؟</button>`;
+  const whoPanel = `<div class="who-panel" id="who-${m.id}" style="display:none"></div>`;
   const actions = started
     ? `<div class="actions"><button class="save" onclick="saveResult(${m.id})">حفظ النتيجة</button>${m.manual?`<button class="dbl-btn" onclick="clearResult(${m.id})">إلغاء اليدوي</button>`:''}</div>`
     : "";
@@ -827,8 +861,23 @@ function adminRow(m, predicted, total, started){
       <div class="team"><span class="flag">${i2.flag}</span><span class="tname">${i2.ar}</span></div>
     </div>
     ${countLine}
+    ${whoBtn}
+    ${whoPanel}
     ${actions}
   </div>`;
+}
+
+// أسماء من توقّع ومن لم يتوقّع لمباراة (أدمن)
+function showWho(mid, btn){
+  const box=document.getElementById("who-"+mid); if(!box) return;
+  if(box.style.display==="block"){ box.style.display="none"; btn.textContent="👥 مين توقّع؟"; return; }
+  const ids=new Set(adminPredByMatch[mid]||[]);
+  const did=adminPlayers.filter(p=>ids.has(p.id)).map(p=>p.name);
+  const didnt=adminPlayers.filter(p=>!ids.has(p.id)).map(p=>p.name);
+  const chips=(arr,cls)=> arr.length ? arr.map(n=>`<span class="who-chip ${cls}">${esc(n)}</span>`).join("") : `<span class="who-empty">${cls==="no"?"الكل توقّع 🎉":"لا أحد"}</span>`;
+  box.innerHTML=`<div class="who-col"><div class="who-h ok">✅ توقّعوا (${did.length})</div><div class="who-chips">${chips(did,"ok")}</div></div>
+    <div class="who-col"><div class="who-h no">❌ ما توقّعوا (${didnt.length})</div><div class="who-chips">${chips(didnt,"no")}</div></div>`;
+  box.style.display="block"; btn.textContent="إخفاء";
 }
 
 async function saveResult(mid){
