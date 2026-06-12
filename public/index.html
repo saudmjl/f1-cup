@@ -183,6 +183,13 @@
   #a2hs .tx b{color:var(--gold)}
   #a2hs .shr{display:inline-block;color:var(--blue);font-weight:900}
   #a2hs .x{flex:0 0 auto;background:none;border:none;color:var(--muted);font-size:1.3rem;cursor:pointer;padding:0 4px}
+  /* شريط تفعيل التذكيرات */
+  .notif-bar{display:flex;align-items:center;gap:10px;margin:0 0 16px;padding:11px 13px;
+    background:linear-gradient(180deg,rgba(245,197,66,.12),rgba(245,197,66,.05));
+    border:1px solid rgba(245,197,66,.3);border-radius:14px;font-size:.82rem;color:var(--txt)}
+  .notif-bar span{flex:1;line-height:1.5}
+  .notif-bar button{flex:0 0 auto;background:var(--gold);color:#1a1205;border:none;font-family:inherit;
+    font-weight:900;font-size:.82rem;padding:8px 16px;border-radius:10px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -258,6 +265,10 @@
       <button class="tab" id="tabReveal" onclick="showTab('reveal')">شيك نتايج غيرك</button>
       <button class="tab" id="tabAdmin" onclick="showTab('admin')" style="display:none">النتائج</button>
     </div>
+    <div id="notifBar" class="notif-bar" style="display:none">
+      <span id="notifTxt">🔔 فعّل التذكيرات ليوصلك تنبيه قبل كل مباراة</span>
+      <button id="notifBtn" onclick="enableNotifs()">تفعيل</button>
+    </div>
     <div id="matchesView"><div class="loading"><div class="spin"></div></div></div>
     <div id="boardView" style="display:none"><div class="loading"><div class="spin"></div></div></div>
     <div id="statsView" style="display:none"><div class="loading"><div class="spin"></div></div></div>
@@ -277,6 +288,65 @@ let clockOffset = 0, countdownTimer = null;
 
 // تهريب أي رموز HTML في النصوص (حماية من XSS عبر أسماء اللاعبين)
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ─── إشعارات Web Push (التذكير بالتوقع) ───
+const VAPID_PUBLIC = "BFHrm5cgp_SDM0YfNzT5lyu50cpL_1iwZyZWM5N3GPOAmiYCNhd42PqYQgacfPXniODWiwy2wBTHs2v_gISJ9VQ";
+function urlB64ToUint8(b64){
+  const pad="=".repeat((4-b64.length%4)%4);
+  const base=(b64+pad).replace(/-/g,"+").replace(/_/g,"/");
+  const raw=atob(base); const arr=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i);
+  return arr;
+}
+function pushSupported(){ return ("serviceWorker" in navigator) && ("PushManager" in window) && ("Notification" in window); }
+function isIOSdevice(){ return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1); }
+function isStandalone(){ return window.navigator.standalone===true || window.matchMedia("(display-mode: standalone)").matches; }
+async function registerSW(){ try{ if("serviceWorker" in navigator) return await navigator.serviceWorker.register("/sw.js"); }catch(e){} return null; }
+
+async function enableNotifs(){
+  try{
+    if(!pushSupported()){ toast("جهازك لا يدعم الإشعارات", true); return; }
+    if(isIOSdevice() && !isStandalone()){ toast("ثبّت التطبيق أول: مشاركة ⬆️ ← إضافة إلى الشاشة الرئيسية", true); return; }
+    const reg = await registerSW();
+    if(!reg){ toast("تعذّر التفعيل", true); return; }
+    await navigator.serviceWorker.ready;
+    const perm = await Notification.requestPermission();
+    if(perm!=="granted"){ toast("لازم تسمح بالإشعارات", true); return; }
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly:true, applicationServerKey: urlB64ToUint8(VAPID_PUBLIC) });
+    const r = await fetch("/api/subscribe",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token, subscription: sub.toJSON()})});
+    if(r.ok){ toast("✅ تم تفعيل التذكيرات"); try{localStorage.setItem("notif_on","1")}catch(e){} updateNotifBar(); }
+    else toast("تعذّر حفظ الاشتراك", true);
+  }catch(e){ toast("تعذّر التفعيل", true); }
+}
+
+function updateNotifBar(){
+  const bar=document.getElementById("notifBar"); if(!bar) return;
+  if(!("serviceWorker" in navigator)){ bar.style.display="none"; return; }
+  const granted = ("Notification" in window) && Notification.permission==="granted";
+  let on=false; try{ on = localStorage.getItem("notif_on")==="1"; }catch(e){}
+  if(granted && on){ bar.style.display="none"; return; }
+  const txt=document.getElementById("notifTxt"), btn=document.getElementById("notifBtn");
+  if(isIOSdevice() && !isStandalone()){
+    txt.textContent="🔔 ثبّت التطبيق أول (مشاركة ⬆️ ← إضافة للشاشة الرئيسية) عشان توصلك تذكيرات التوقّع";
+    btn.style.display="none";
+  } else if(pushSupported()){
+    txt.textContent="🔔 فعّل التذكيرات ليوصلك تنبيه قبل كل مباراة";
+    btn.style.display="";
+  } else { bar.style.display="none"; return; }
+  bar.style.display="flex";
+}
+
+async function remindNext(btn){
+  if(btn){ btn.disabled=true; btn.textContent="… جاري الإرسال"; }
+  try{
+    const r=await fetch("/api/notify",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({token, force:true})});
+    const d=await r.json();
+    if(r.ok) toast(`📤 أُرسل التذكير — ${d.sent||0} إشعار`);
+    else toast(d.error||"تعذّر الإرسال", true);
+  }catch(e){ toast("تعذّر الإرسال", true); }
+  if(btn){ btn.disabled=false; btn.textContent="🔔 ذكّر اللي ما توقّعوا في المباراة القادمة"; }
+}
 
 // استرجاع الجلسة المحفوظة
 token = sessionStorage.getItem("f1_token");
@@ -325,6 +395,8 @@ function showApp(){
   document.getElementById("appView").style.display="block";
   document.getElementById("meName").textContent = meName;
   loadMatches();
+  registerSW();
+  updateNotifBar();
 }
 
 function showTab(t){
@@ -657,6 +729,7 @@ async function loadAdmin(){
     const started=all.filter(m=>new Date(m.kickoff)<=now).sort((a,b)=>new Date(b.kickoff)-new Date(a.kickoff));
     const upcoming=all.filter(m=>new Date(m.kickoff)>now).sort((a,b)=>new Date(a.kickoff)-new Date(b.kickoff)).slice(0,16);
     let html=`<div class="howto-app dbl-hint">👥 إجمالي اللاعبين: <b>${total}</b> — كم توقّع وكم ما توقّع لكل مباراة، وإدخال النتيجة عند تأخّر المصدر.</div>`;
+    html+=`<button class="save" style="width:100%;margin:0 0 14px" onclick="remindNext(this)">🔔 ذكّر اللي ما توقّعوا في المباراة القادمة</button>`;
     if(started.length){
       html+='<div class="day-head"><h3>المباريات التي بدأت</h3></div>';
       html+=started.map(m=>adminRow(m,counts[m.id]||0,total,true)).join("");
