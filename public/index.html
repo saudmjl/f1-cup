@@ -232,6 +232,20 @@
   @keyframes ptrspin{to{transform:rotate(360deg)}}
   @keyframes swipeInNext{from{opacity:.35;transform:translateX(26px)}to{opacity:1;transform:none}}
   @keyframes swipeInPrev{from{opacity:.35;transform:translateX(-26px)}to{opacity:1;transform:none}}
+  /* نافذة صورة القبو الفرنسي */
+  #qaboModal{display:none;position:fixed;inset:0;z-index:9998;background:rgba(5,8,7,.82);
+    backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:22px;animation:a2hsFade .25s ease}
+  .qabo-card{position:relative;max-width:380px;width:100%;border-radius:24px;overflow:hidden;
+    box-shadow:0 30px 70px -20px rgba(0,0,0,.85);animation:a2hsPop .3s cubic-bezier(.2,.9,.3,1.3)}
+  .qabo-card img{display:block;width:100%;height:auto}
+  .qabo-card .qabo-cap{position:absolute;left:0;right:0;bottom:0;padding:46px 18px 20px;text-align:center;
+    background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.82));
+    color:#fff;font-family:'Rubik',inherit;font-weight:900;font-size:1.32rem;line-height:1.5;
+    text-shadow:0 2px 14px rgba(0,0,0,.9)}
+  .qabo-card .qabo-cap b{color:var(--gold)}
+  .qabo-card .x{position:absolute;top:12px;left:14px;width:34px;height:34px;border-radius:50%;
+    background:rgba(0,0,0,.55);border:none;color:#fff;font-size:1.5rem;cursor:pointer;line-height:1;
+    display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
@@ -247,14 +261,24 @@
     <button class="go" onclick="dismissA2HS()">تمام 👍</button>
   </div>
 </div>
+<!-- نافذة صورة القبو الفرنسي -->
+<div id="qaboModal" onclick="if(event.target===this)closeQabo()">
+  <div class="qabo-card">
+    <button class="x" onclick="closeQabo()" aria-label="إغلاق">×</button>
+    <img src="/qabo.jpg" alt="القبو الفرنسي"/>
+    <div class="qabo-cap">تابع كأس العالم في <b>القبو الفرنسي</b> ⚽🏆</div>
+  </div>
+</div>
 <script>
-  function dismissA2HS(){ var b=document.getElementById('a2hs'); if(b) b.style.display='none'; }
+  function openQabo(){ var m=document.getElementById('qaboModal'); if(m) m.style.display='flex'; }
+  function closeQabo(){ var m=document.getElementById('qaboModal'); if(m) m.style.display='none'; }
+  function dismissA2HS(){ var b=document.getElementById('a2hs'); if(b) b.style.display='none'; openQabo(); }
   (function(){
     var ua=navigator.userAgent||'';
     var isIOS=/iPhone|iPad|iPod/.test(ua) || (navigator.platform==='MacIntel' && navigator.maxTouchPoints>1);
     var isAndroid=/Android/i.test(ua);
     var standalone = window.navigator.standalone===true || window.matchMedia('(display-mode: standalone)').matches;
-    // تظهر كل مرة طالما لم يُثبَّت التطبيق بعد
+    // أولًا: نافذة تثبيت التطبيق طالما لم يُثبَّت بعد — وعند إغلاقها تظهر صورة القبو
     if((isIOS||isAndroid) && !standalone){
       var share='<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px"><path d="M12 15V4"/><path d="M8.5 7.5 12 4l3.5 3.5"/><path d="M8 10H6v10h12V10h-2"/></svg>';
       var steps=document.getElementById('a2hsSteps');
@@ -262,6 +286,9 @@
         ? '<div>1️⃣ افتح الرابط في <b>Safari</b></div><div>2️⃣ اضغط زر <b>Share '+share+'</b> تحت</div><div>3️⃣ اختر <b>Add to Home Screen</b></div>'
         : '<div>1️⃣ افتح قائمة المتصفح <b>⋮</b></div><div>2️⃣ اختر <b>Add to Home screen</b></div>'; }
       setTimeout(function(){ var b=document.getElementById('a2hs'); if(b) b.style.display='flex'; }, 1200);
+    } else {
+      // على الكمبيوتر أو إذا التطبيق مثبّت: تظهر صورة القبو مباشرة
+      setTimeout(openQabo, 900);
     }
   })();
 </script>
