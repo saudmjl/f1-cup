@@ -132,6 +132,13 @@ export default async function handler(req, res) {
       await db.from("predictions").update({ points: u.points, scored: u.scored }).eq("id", u.id);
     }
 
+    // ── احتياطي: تذكيرات قبل المباراة عند أي مزامنة فعلية (مع منع التكرار) ──
+    try {
+      const { remindForMatches, preWindowMatches } = await import("./_remind.js");
+      const { data: ms } = await db.from("matches").select("id,team1,team2,kickoff");
+      await remindForMatches(db, preWindowMatches(ms));
+    } catch (e) { /* لا تُفشل المزامنة بسبب الإشعارات */ }
+
     return json(res, 200, { ok: true, matches: rows.length, recalculated: updates.length });
   } catch (e) {
     return json(res, 500, { error: "تعذّر المزامنة", detail: String(e) });
