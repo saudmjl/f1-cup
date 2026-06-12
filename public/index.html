@@ -230,6 +230,8 @@
   #ptr .ptr-spin{width:20px;height:20px;border-radius:50%;border:2px solid var(--line-strong);border-top-color:var(--pitch)}
   #ptr.refreshing .ptr-spin{animation:ptrspin .7s linear infinite}
   @keyframes ptrspin{to{transform:rotate(360deg)}}
+  @keyframes swipeInNext{from{opacity:.35;transform:translateX(26px)}to{opacity:1;transform:none}}
+  @keyframes swipeInPrev{from{opacity:.35;transform:translateX(-26px)}to{opacity:1;transform:none}}
 </style>
 </head>
 <body>
@@ -984,6 +986,34 @@ window.addEventListener("scroll", function(){
       setTimeout(function(){ refreshing=false; reset(); }, 900);
     } else { reset(); }
   });
+})();
+
+// ─── التنقّل بين التبويبات بالسحب يمين/يسار ───
+(function(){
+  var sx=0, sy=0, tracking=false;
+  function appOpen(){ var a=document.getElementById("appView"); return a && a.style.display!=="none"; }
+  function modalOpen(){ var m=document.getElementById("a2hs"); return m && m.style.display!=="none" && m.style.display!==""; }
+  var TABS=[{k:"matches",t:"tabMatches",v:"matchesView"},{k:"board",t:"tabBoard",v:"boardView"},{k:"stats",t:"tabStats",v:"statsView"},{k:"reveal",t:"tabReveal",v:"revealView"},{k:"admin",t:"tabAdmin",v:"adminView"}];
+  function visibleTabs(){ return TABS.filter(function(x){ var e=document.getElementById(x.t); return e && e.style.display!=="none"; }); }
+  window.addEventListener("touchstart", function(e){
+    if(!appOpen() || modalOpen() || e.touches.length>1){ tracking=false; return; }
+    sx=e.touches[0].clientX; sy=e.touches[0].clientY; tracking=true;
+  }, { passive:true });
+  window.addEventListener("touchend", function(e){
+    if(!tracking) return; tracking=false;
+    var t=e.changedTouches[0]; var dx=t.clientX-sx, dy=t.clientY-sy;
+    if(Math.abs(dx)<60 || Math.abs(dx) < Math.abs(dy)*1.5) return;
+    var list=visibleTabs();
+    var cur=list.findIndex(function(x){ return document.getElementById(x.t).classList.contains("on"); });
+    if(cur<0) return;
+    var dir = dx<0 ? 1 : -1;             // سحب لليسار = التبويب التالي (RTL)
+    var ni=cur+dir;
+    if(ni<0 || ni>=list.length) return;
+    showTab(list[ni].k);
+    var v=document.getElementById(list[ni].v);
+    if(v){ v.style.animation="none"; void v.offsetWidth; v.style.animation=(dir>0?"swipeInNext":"swipeInPrev")+" .22s ease"; }
+    window.scrollTo(0,0);
+  }, { passive:true });
 })();
 </script>
 </body>
