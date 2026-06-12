@@ -36,7 +36,11 @@ export default async function handler(req, res) {
   const currentRound = upcoming.length ? roundKey(upcoming[0].matchday) : latestRound;
   const currentRoundIds = new Set(M.filter(m => roundKey(m.matchday) === currentRound).map(m => m.id));
   const dblThisRound = new Set();
-  for (const p of PR) if (p.is_double && currentRoundIds.has(p.match_id)) dblThisRound.add(p.player_id);
+  for (const p of PR) {
+    if (!p.is_double || !currentRoundIds.has(p.match_id)) continue;
+    const m = mById[p.match_id];
+    if (m && new Date(m.kickoff).getTime() <= now) dblThisRound.add(p.player_id); // يظهر فقط بعد بدء مباراة الدبل
+  }
 
   // المجاميع (الكل + السابق بدون آخر جولة)
   const tot = {}, prev = {};
