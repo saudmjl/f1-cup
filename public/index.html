@@ -197,7 +197,7 @@
 <!-- بانر إضافة للشاشة الرئيسية (آيفون فقط) -->
 <div id="a2hs">
   <img class="ic" src="/icon-192.png" alt=""/>
-  <div class="tx">ثبّت التطبيق على جوالك: اضغط زر المشاركة <span class="shr">⬆️</span> ثم اختر <b>«إضافة إلى الشاشة الرئيسية»</b></div>
+  <div class="tx">ثبّت التطبيق على جوالك: اضغط زر <b class="shr">Share ⬆️</b> ثم اختر <b>Add to Home Screen</b></div>
   <button class="x" onclick="dismissA2HS()" aria-label="إغلاق">×</button>
 </div>
 <script>
@@ -328,7 +328,7 @@ function updateNotifBar(){
   if(granted && on){ bar.style.display="none"; return; }
   const txt=document.getElementById("notifTxt"), btn=document.getElementById("notifBtn");
   if(isIOSdevice() && !isStandalone()){
-    txt.textContent="🔔 ثبّت التطبيق أول (مشاركة ⬆️ ← إضافة للشاشة الرئيسية) عشان توصلك تذكيرات التوقّع";
+    txt.textContent="🔔 ثبّت التطبيق أول: Share ⬆️ ← Add to Home Screen — عشان توصلك التذكيرات";
     btn.style.display="none";
   } else if(pushSupported()){
     txt.textContent="🔔 فعّل التذكيرات ليوصلك تنبيه قبل كل مباراة";
