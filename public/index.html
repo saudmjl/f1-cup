@@ -253,30 +253,17 @@
   .qabo-card .x{position:absolute;top:12px;left:14px;width:34px;height:34px;border-radius:50%;
     background:rgba(0,0,0,.55);border:none;color:#fff;font-size:1.5rem;cursor:pointer;line-height:1;
     display:flex;align-items:center;justify-content:center}
-  /* نافذة لقطة قروب الواتساب (إعادة تصميم) */
-  #chatModal{display:none;position:fixed;inset:0;z-index:9998;background:rgba(5,8,7,.82);
+  /* نافذة صورة «راح الدبل يا سول» */
+  #soolModal{display:none;position:fixed;inset:0;z-index:9998;background:rgba(5,8,7,.82);
     backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:18px;animation:a2hsFade .25s ease}
-  .chat-card{position:relative;max-width:360px;width:100%;border-radius:20px;overflow:hidden;
+  .sool-card{position:relative;max-width:460px;width:100%;border-radius:20px;overflow:hidden;
     box-shadow:0 30px 70px -20px rgba(0,0,0,.85);animation:a2hsPop .3s cubic-bezier(.2,.9,.3,1.3)}
-  .chat-card img{display:block;width:100%;height:auto}
-  .wa{background:#0b141a;padding:14px 12px 18px;direction:rtl;font-family:'Cairo','Tahoma',sans-serif}
-  .wa-row{display:flex;margin-bottom:7px;justify-content:flex-end}
-  .wa-row.out{justify-content:flex-start}
-  .wa-b{position:relative;max-width:80%;padding:7px 11px 17px;border-radius:9px;font-size:.92rem;color:#e9edef;line-height:1.5;word-break:break-word}
-  .wa-b.in2{background:#202c33;border-top-left-radius:2px}
-  .wa-b.out2{background:#005c4b;border-top-right-radius:2px}
-  .wa-b .t{position:absolute;bottom:3px;left:9px;font-size:.6rem;color:#8696a0;white-space:nowrap;direction:ltr}
-  .wa-b.out2 .t{color:#a7c2bb}
-  .wa-div{text-align:center;color:#8696a0;font-size:.78rem;font-weight:700;margin:8px 0 12px;direction:ltr}
-  .wa-stk{margin:10px 6px 4px;border-radius:12px;overflow:hidden;box-shadow:0 6px 18px -8px rgba(0,0,0,.7);transform:rotate(-1.5deg)}
-  .wa-pred{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;
-    background:#1c2417;border:1px solid #3a3413;color:#f5c542;font-weight:900;font-family:'Rubik','Cairo',sans-serif}
-  .wa-pred .sc{font-size:1.25rem;letter-spacing:1px}
-  .wa-pred .pl{font-size:.95rem}
-  .wa-pred .pt{font-size:.95rem}
-  .wa-yellow{display:inline-block;background:#f5e003;color:#111;font-weight:900;font-size:1.15rem;
-    padding:5px 12px;border-radius:4px;direction:rtl;transform:rotate(-1.5deg);margin:8px 6px 2px}
-  .chat-card .x{position:absolute;top:10px;left:12px;width:34px;height:34px;border-radius:50%;
+  .sool-card img{display:block;width:100%;height:auto}
+  .sool-card .sool-cap{position:absolute;left:0;right:0;bottom:0;padding:42px 16px 16px;text-align:center;
+    background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.85));
+    color:#fff;font-family:'Rubik',inherit;font-weight:900;font-size:1.4rem;line-height:1.4;text-shadow:0 2px 14px rgba(0,0,0,.95)}
+  .sool-card .sool-cap b{color:var(--gold)}
+  .sool-card .x{position:absolute;top:10px;left:12px;width:34px;height:34px;border-radius:50%;
     background:rgba(0,0,0,.6);border:none;color:#fff;font-size:1.5rem;cursor:pointer;line-height:1;z-index:2;
     display:flex;align-items:center;justify-content:center}
 </style>
@@ -303,9 +290,20 @@
   </div>
 </div>
 
+<!-- نافذة «راح الدبل يا سول» -->
+<div id="soolModal" onclick="if(event.target===this)closeSool()">
+  <div class="sool-card">
+    <button class="x" onclick="closeSool()" aria-label="إغلاق">×</button>
+    <img src="/sool.jpg" alt="USA 4-1 PAR"/>
+    <div class="sool-cap">راح الدبل يا <b>سووووول</b> 😭</div>
+  </div>
+</div>
+
 <script>
   function openQabo(){ var m=document.getElementById('qaboModal'); if(m) m.style.display='flex'; }
-  function closeQabo(){ var m=document.getElementById('qaboModal'); if(m) m.style.display='none'; }
+  function closeQabo(){ var m=document.getElementById('qaboModal'); if(m) m.style.display='none'; openSool(); }
+  function openSool(){ var m=document.getElementById('soolModal'); if(m) m.style.display='flex'; }
+  function closeSool(){ var m=document.getElementById('soolModal'); if(m) m.style.display='none'; }
   function dismissA2HS(){ var b=document.getElementById('a2hs'); if(b) b.style.display='none'; openQabo(); }
   (function(){
     var ua=navigator.userAgent||'';
