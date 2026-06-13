@@ -258,15 +258,16 @@
     backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:18px;animation:a2hsFade .25s ease}
   .chat-card{position:relative;max-width:360px;width:100%;border-radius:20px;overflow:hidden;
     box-shadow:0 30px 70px -20px rgba(0,0,0,.85);animation:a2hsPop .3s cubic-bezier(.2,.9,.3,1.3)}
+  .chat-card img{display:block;width:100%;height:auto}
   .wa{background:#0b141a;padding:14px 12px 18px;direction:rtl;font-family:'Cairo','Tahoma',sans-serif}
-  .wa-row{display:flex;margin-bottom:7px}
+  .wa-row{display:flex;margin-bottom:7px;justify-content:flex-end}
   .wa-row.out{justify-content:flex-start}
-  .wa-b{position:relative;max-width:78%;padding:7px 11px 17px;border-radius:9px;font-size:.92rem;color:#e9edef;line-height:1.5;word-break:break-word}
-  .wa-b.in2{background:#202c33;border-top-right-radius:2px}
-  .wa-b.out2{background:#005c4b;border-top-left-radius:2px}
-  .wa-b .t{position:absolute;bottom:3px;left:9px;font-size:.6rem;color:#8696a0;white-space:nowrap}
+  .wa-b{position:relative;max-width:80%;padding:7px 11px 17px;border-radius:9px;font-size:.92rem;color:#e9edef;line-height:1.5;word-break:break-word}
+  .wa-b.in2{background:#202c33;border-top-left-radius:2px}
+  .wa-b.out2{background:#005c4b;border-top-right-radius:2px}
+  .wa-b .t{position:absolute;bottom:3px;left:9px;font-size:.6rem;color:#8696a0;white-space:nowrap;direction:ltr}
   .wa-b.out2 .t{color:#a7c2bb}
-  .wa-div{text-align:center;color:#8696a0;font-size:.78rem;font-weight:700;margin:8px 0 12px}
+  .wa-div{text-align:center;color:#8696a0;font-size:.78rem;font-weight:700;margin:8px 0 12px;direction:ltr}
   .wa-stk{margin:10px 6px 4px;border-radius:12px;overflow:hidden;box-shadow:0 6px 18px -8px rgba(0,0,0,.7);transform:rotate(-1.5deg)}
   .wa-pred{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 16px;
     background:#1c2417;border:1px solid #3a3413;color:#f5c542;font-weight:900;font-family:'Rubik','Cairo',sans-serif}
@@ -306,18 +307,7 @@
 <div id="chatModal" onclick="if(event.target===this)closeChat()">
   <div class="chat-card">
     <button class="x" onclick="closeChat()" aria-label="إغلاق">×</button>
-    <div class="wa">
-      <div class="wa-row"><div class="wa-b in2">كس ام القهررر<span class="t">6:02 AM</span></div></div>
-      <div class="wa-row"><div class="wa-b in2">كيكسكسككسكسكس<span class="t">6:02 AM</span></div></div>
-      <div class="wa-row out"><div class="wa-b out2">🤣🤣🤣🤣🤣🤣🤣<span class="t">6:02 AM ✓✓</span></div></div>
-      <div class="wa-div">4 unread messages</div>
-      <div class="wa-row"><div class="wa-b in2">سعود اقسم بالله<span class="t">6:03 AM</span></div></div>
-      <div class="wa-row"><div class="wa-b in2">استاهلها<span class="t">6:03 AM</span></div></div>
-      <div class="wa-row"><div class="wa-b in2">والله<span class="t">6:03 AM</span></div></div>
-      <div class="wa-row"><div class="wa-b in2">ظلم<span class="t">6:03 AM</span></div></div>
-      <div class="wa-stk"><div class="wa-pred"><span class="pl">⚡ سول · دبل</span><span class="sc">1-3</span><span class="pt">+40</span></div></div>
-      <div style="text-align:center"><span class="wa-yellow">بوكاااااء😭😭😭😭😭</span></div>
-    </div>
+    <img src="/chat.jpg" alt="قروب F1"/>
   </div>
 </div>
 <script>
