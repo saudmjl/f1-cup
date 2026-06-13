@@ -303,18 +303,9 @@
   </div>
 </div>
 
-<!-- نافذة لقطة قروب الواتساب -->
-<div id="chatModal" onclick="if(event.target===this)closeChat()">
-  <div class="chat-card">
-    <button class="x" onclick="closeChat()" aria-label="إغلاق">×</button>
-    <img src="/chat.jpg" alt="قروب F1"/>
-  </div>
-</div>
 <script>
   function openQabo(){ var m=document.getElementById('qaboModal'); if(m) m.style.display='flex'; }
-  function closeQabo(){ var m=document.getElementById('qaboModal'); if(m) m.style.display='none'; openChat(); }
-  function openChat(){ var m=document.getElementById('chatModal'); if(m) m.style.display='flex'; }
-  function closeChat(){ var m=document.getElementById('chatModal'); if(m) m.style.display='none'; }
+  function closeQabo(){ var m=document.getElementById('qaboModal'); if(m) m.style.display='none'; }
   function dismissA2HS(){ var b=document.getElementById('a2hs'); if(b) b.style.display='none'; openQabo(); }
   (function(){
     var ua=navigator.userAgent||'';
