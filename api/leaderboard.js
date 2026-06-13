@@ -1,4 +1,4 @@
-// GET /api/leaderboard → الترتيب العام + حركة الترتيب (▲▼ من آخر جولة) + هل استخدم الدبل بالجولة الحالية
+// GET /api/leaderboard → الترتيب العام + حركة الترتيب (▲▼ من آخر مباراة) + هل استخدم الدبل بالجولة الحالية
 import { db, json } from "./_lib.js";
 
 function roundKey(md) {
@@ -24,11 +24,13 @@ export default async function handler(req, res) {
   const mById = Object.fromEntries(M.map(m => [m.id, m]));
   const finished = M.filter(m => m.status === "finished");
 
-  // أحدث جولة منتهية (لحساب الحركة)
-  let latestRound = null, maxK = -1;
-  for (const m of finished) { const k = new Date(m.kickoff).getTime(); if (k > maxK) { maxK = k; latestRound = roundKey(m.matchday); } }
-  const latestRoundIds = new Set(finished.filter(m => roundKey(m.matchday) === latestRound).map(m => m.id));
-  const prevFinishedIds = new Set(finished.filter(m => !latestRoundIds.has(m.id)).map(m => m.id));
+  // آخر مباراة منتهية (الحركة تُحسب منها) + آخر جولة (احتياطيًا لتحديد الجولة الحالية)
+  let lastMatchId = null, latestRound = null, maxK = -1;
+  for (const m of finished) {
+    const k = new Date(m.kickoff).getTime();
+    if (k > maxK || (k === maxK && m.id > lastMatchId)) { maxK = k; lastMatchId = m.id; latestRound = roundKey(m.matchday); }
+  }
+  const prevFinishedIds = new Set(finished.filter(m => m.id !== lastMatchId).map(m => m.id));
   const hasPrev = prevFinishedIds.size > 0;
 
   // الجولة الحالية = جولة أقرب مباراة قادمة (وإلا آخر جولة)
